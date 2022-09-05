@@ -6,7 +6,6 @@ Initially based on Quarkus starter project: https://github.com/quarkusio/quarkus
 ---------------------------------------------------------------------------------------------------
 
 
-
 # Quarkus demo: Hibernate ORM with Panache, Kotlin and RESTEasy
 
 This is a minimal CRUD service exposing a couple of endpoints over REST,
@@ -21,6 +20,32 @@ While the code is surprisingly simple, under the hood this is using:
  - Infinispan based caching
  - All safely coordinated by the Narayana Transaction Manager
 
+## Architecture
+
+The application is based on [Clean Architecture](https://www.freecodecamp.org/news/a-quick-introduction-to-clean-architecture-990c014448d2/) principles implementing multiple modules:
+````
+_____________________
+|                   |
+|      API          |
+|                   |
+_____________________
+        |
+        |
+        v
+_____________________
+|                   |
+|     DOMAIN        |
+|                   |
+_____________________
+        |
+        |
+        v
+_____________________
+|                   |
+|  INFRASTRUCTURE   |
+|                   |
+_____________________
+````
 ## Requirements
 
 To compile and run this demo you will need:
@@ -96,7 +121,7 @@ native executable:
 
 After getting a cup of coffee, you'll be able to run this binary directly:
 
-> ./target/hibernate-orm-panache-kotlin-quickstart-1.0.0-SNAPSHOT-runner
+> ./target/backend-quarkus-1.0.0-SNAPSHOT-runner
 
     Please brace yourself: don't choke on that fresh cup of coffee you just got.
     

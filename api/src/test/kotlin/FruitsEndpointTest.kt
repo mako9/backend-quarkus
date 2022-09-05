@@ -1,10 +1,8 @@
-package org.acme.hibernate.orm.panache
-
+import io.quarkus.test.junit.QuarkusTest
 import io.restassured.RestAssured.given
 import org.hamcrest.CoreMatchers.containsString
-import org.hamcrest.core.IsNot.not
+import org.hamcrest.CoreMatchers.not
 import org.junit.jupiter.api.Test
-import io.quarkus.test.junit.QuarkusTest
 
 @QuarkusTest
 class FruitsEndpointTest {

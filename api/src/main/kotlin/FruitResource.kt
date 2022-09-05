@@ -1,21 +1,11 @@
-package org.acme.hibernate.orm.panache
-
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.quarkus.panache.common.Sort
 import org.jboss.logging.Logger
-import org.jboss.resteasy.reactive.RestPath;
-import java.lang.Exception
+import org.jboss.resteasy.reactive.RestPath
 import javax.enterprise.context.ApplicationScoped
 import javax.inject.Inject
 import javax.transaction.Transactional
-import javax.ws.rs.Consumes
-import javax.ws.rs.DELETE
-import javax.ws.rs.GET
-import javax.ws.rs.POST
-import javax.ws.rs.PUT
-import javax.ws.rs.Path
-import javax.ws.rs.Produces
-import javax.ws.rs.WebApplicationException
+import javax.ws.rs.*
 import javax.ws.rs.core.Response
 import javax.ws.rs.ext.ExceptionMapper
 import javax.ws.rs.ext.Provider
@@ -27,6 +17,7 @@ import javax.ws.rs.ext.Provider
 class FruitResource {
     @GET
     fun get(): List<Fruit> {
+        print(Fruit.count())
         return Fruit.listAll(Sort.by("name"))
     }
 
