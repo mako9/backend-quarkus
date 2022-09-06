@@ -4,6 +4,7 @@ import org.hamcrest.CoreMatchers.containsString
 import org.hamcrest.CoreMatchers.not
 import org.junit.jupiter.api.Test
 
+
 @QuarkusTest
 class FruitsEndpointTest {
     @Test

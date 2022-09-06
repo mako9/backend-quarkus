@@ -1,8 +1,8 @@
 package infrastructure
 
-import org.junit.jupiter.api.Test
 import io.quarkus.test.junit.QuarkusTest
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
 
 @QuarkusTest
 class FruitTest {
