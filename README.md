@@ -151,3 +151,11 @@ Then, rebuild demo docker image with a system property that points to the DB.
 ```bash
 -Dquarkus.datasource.jdbc.url=jdbc:postgresql://<DB_SERVICE_NAME>/quarkus_test
 ```
+
+## OpenAPI
+
+The project provides the OpenAPI specification for `dev` or `test` mode:
+
+Swagger UI: <http://localhost:8080/q/swagger-ui/>
+
+Download OpenAPI file: <http://localhost:8080/q/openapi/>
