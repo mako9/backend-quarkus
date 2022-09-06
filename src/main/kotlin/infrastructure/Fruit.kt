@@ -1,3 +1,5 @@
+package infrastructure
+
 import io.quarkus.hibernate.orm.panache.kotlin.PanacheCompanion
 import io.quarkus.hibernate.orm.panache.kotlin.PanacheEntity
 import javax.persistence.Cacheable

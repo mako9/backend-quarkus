@@ -1,4 +1,7 @@
+package api
+
 import com.fasterxml.jackson.databind.ObjectMapper
+import infrastructure.Fruit
 import io.quarkus.panache.common.Sort
 import org.jboss.logging.Logger
 import org.jboss.resteasy.reactive.RestPath
@@ -17,7 +20,6 @@ import javax.ws.rs.ext.Provider
 class FruitResource {
     @GET
     fun get(): List<Fruit> {
-        print(Fruit.count())
         return Fruit.listAll(Sort.by("name"))
     }
 
@@ -61,7 +63,7 @@ class FruitResource {
     @Provider
     class ErrorMapper : ExceptionMapper<Exception> {
         @Inject
-        var objectMapper: ObjectMapper? = null
+        private var objectMapper: ObjectMapper? = null
 
         override fun toResponse(exception: Exception): Response {
             LOGGER.error("Failed to handle request", exception)

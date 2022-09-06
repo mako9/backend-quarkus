@@ -22,7 +22,7 @@ While the code is surprisingly simple, under the hood this is using:
 
 ## Architecture
 
-The application is based on [Clean Architecture](https://www.freecodecamp.org/news/a-quick-introduction-to-clean-architecture-990c014448d2/) principles implementing multiple modules:
+The application is based on [Clean Architecture](https://www.freecodecamp.org/news/a-quick-introduction-to-clean-architecture-990c014448d2/) principles:
 ````
 _____________________
 |                   |
