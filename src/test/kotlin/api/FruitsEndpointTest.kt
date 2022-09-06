@@ -10,7 +10,7 @@ class FruitsEndpointTest {
     @Test
     fun `List all, should have all 3 fruits the database has initially`() {
         given()
-            .`when`().get("/fruits")
+            .`when`().get("/api/public/fruits")
             .then()
             .statusCode(200)
             .body(
@@ -21,13 +21,13 @@ class FruitsEndpointTest {
 
         //Delete the Cherry:
         given()
-            .`when`().delete("/fruits/1")
+            .`when`().delete("/api/public/fruits/1")
             .then()
             .statusCode(204)
 
         //List all, cherry should be missing now:
         given()
-            .`when`().get("/fruits")
+            .`when`().get("/api/public/fruits")
             .then()
             .statusCode(200)
             .body(

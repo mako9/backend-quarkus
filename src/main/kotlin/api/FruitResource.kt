@@ -13,7 +13,7 @@ import javax.ws.rs.core.Response
 import javax.ws.rs.ext.ExceptionMapper
 import javax.ws.rs.ext.Provider
 
-@Path("fruits")
+@Path("/api/public/fruits")
 @ApplicationScoped
 @Produces("application/json")
 @Consumes("application/json")
