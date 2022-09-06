@@ -2,24 +2,6 @@
 
 Initially based on Quarkus starter project: https://github.com/quarkusio/quarkus-quickstarts
 
-
----------------------------------------------------------------------------------------------------
-
-
-# Quarkus demo: Hibernate ORM with Panache, Kotlin and RESTEasy
-
-This is a minimal CRUD service exposing a couple of endpoints over REST,
-with a front-end based on Angular so you can play with it from your browser.
-
-While the code is surprisingly simple, under the hood this is using:
- - RESTEasy to expose the REST endpoints
- - Hibernate ORM with Panache and Kotlin to perform the CRUD operations on the database
- - A PostgreSQL database; see below to run one via Docker
- - ArC, the CDI inspired dependency injection tool with zero overhead
- - The high performance Agroal connection pool
- - Infinispan based caching
- - All safely coordinated by the Narayana Transaction Manager
-
 ## Architecture
 
 The application is based on [Clean Architecture](https://www.freecodecamp.org/news/a-quick-introduction-to-clean-architecture-990c014448d2/) principles:
@@ -46,6 +28,47 @@ _____________________
 |                   |
 _____________________
 ````
+
+## Authorization
+
+The authorization of this application is based on the following principles / components:
+
+- OpendID connect
+- Keycloak
+- Bearer token authentication
+
+This application uses RBAC (Role-Based Access Control) to secure endpoints only for granted users.
+The endpoints are protected and can only be accessed if a client is sending a bearer token along with the request, which must be valid (e.g.: signature, expiration and audience) and trusted by the application.
+The bearer token is issued by a Keycloak Server and represents the subject to which the token was issued for. For being an OAuth 2.0 Authorization Server, the token also references the client acting on behalf of the user.
+
+To configure authorization policies for dev / test go to [quarkus-realm.json](/config/quarkus-realm.json).
+
+## OpenAPI
+
+The project provides the OpenAPI specification for `dev` or `test` mode:
+
+Swagger UI: <http://localhost:8080/q/swagger-ui/>
+
+Download OpenAPI file: <http://localhost:8080/q/openapi/>
+
+
+---------------------------------------------------------------------------------------------------
+
+
+# Quarkus demo: Hibernate ORM with Panache, Kotlin and RESTEasy
+
+This is a minimal CRUD service exposing a couple of endpoints over REST,
+with a front-end based on Angular so you can play with it from your browser.
+
+While the code is surprisingly simple, under the hood this is using:
+ - RESTEasy to expose the REST endpoints
+ - Hibernate ORM with Panache and Kotlin to perform the CRUD operations on the database
+ - A PostgreSQL database; see below to run one via Docker
+ - ArC, the CDI inspired dependency injection tool with zero overhead
+ - The high performance Agroal connection pool
+ - Infinispan based caching
+ - All safely coordinated by the Narayana Transaction Manager
+
 ## Requirements
 
 To compile and run this demo you will need:
@@ -151,11 +174,3 @@ Then, rebuild demo docker image with a system property that points to the DB.
 ```bash
 -Dquarkus.datasource.jdbc.url=jdbc:postgresql://<DB_SERVICE_NAME>/quarkus_test
 ```
-
-## OpenAPI
-
-The project provides the OpenAPI specification for `dev` or `test` mode:
-
-Swagger UI: <http://localhost:8080/q/swagger-ui/>
-
-Download OpenAPI file: <http://localhost:8080/q/openapi/>
