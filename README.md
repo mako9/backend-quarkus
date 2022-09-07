@@ -51,6 +51,11 @@ Swagger UI: <http://localhost:8080/q/swagger-ui/>
 
 Download OpenAPI file: <http://localhost:8080/q/openapi/>
 
+## Database migration
+
+For database deployment and migration the [Liquibase](https://www.liquibase.org/) framework is used.
+To configure consistent database changes you have to create a new `changeset` in [/changelog](/src/main/resources/db/changelog) directory. Please refer to the [Liquibase documentation](https://docs.liquibase.com/home.html).  
+
 
 ---------------------------------------------------------------------------------------------------
 
