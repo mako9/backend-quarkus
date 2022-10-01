@@ -4,8 +4,8 @@
   "notBefore" : 0,
   "revokeRefreshToken" : false,
   "refreshTokenMaxReuse" : 0,
-  "accessTokenLifespan" : 300,
-  "accessTokenLifespanForImplicitFlow" : 900,
+  "accessTokenLifespan" : 1800,
+  "accessTokenLifespanForImplicitFlow" : 1800,
   "ssoSessionIdleTimeout" : 1800,
   "ssoSessionMaxLifespan" : 36000,
   "ssoSessionIdleTimeoutRememberMe" : 0,
@@ -1574,6 +1574,9 @@
   "users" : [ {
     "id" : "af134cab-f41c-4675-b141-205f975db679",
     "username" : "admin",
+    "email": "admin@test.tld",
+    "firstName": "admin",
+    "lastName": "admin",
     "enabled" : true,
     "totp" : false,
     "emailVerified" : false,
@@ -1597,6 +1600,9 @@
   }, {
     "id" : "eb4123a3-b722-4798-9af5-8957f823657a",
     "username" : "alice",
+    "email": "alice@test.tld",
+    "firstName": "alice",
+    "lastName": "alice",
     "enabled" : true,
     "totp" : false,
     "emailVerified" : false,
@@ -1620,6 +1626,9 @@
   }, {
     "id" : "1eed6a8e-a853-4597-b4c6-c4c2533546a0",
     "username" : "jdoe",
+    "email": "jdoe@test.tld",
+    "firstName": "john",
+    "lastName": "doe",
     "enabled" : true,
     "totp" : false,
     "emailVerified" : false,
@@ -1637,7 +1646,7 @@
     } ],
     "disableableCredentialTypes" : [ "password" ],
     "requiredActions" : [ ],
-    "realmRoles" : [ "confidential", "user" ],
+    "realmRoles" : [ "user" ],
     "notBefore" : 0,
     "groups" : [ ]
   }, {

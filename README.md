@@ -51,19 +51,22 @@ Swagger UI: <http://localhost:8080/q/swagger-ui/>
 
 Download OpenAPI file: <http://localhost:8080/q/openapi/>
 
-## Database migration
+## Database
+
+This application uses a PostgreSQL database to persist data. For object mapping Hibernate ORM is used.
+Please refer to below listed Requirements to setup application
+
+### Migration
 
 For database deployment and migration the [Liquibase](https://www.liquibase.org/) framework is used.
 To configure consistent database changes you have to create a new `changeset` in [/changelog](/src/main/resources/db/changelog) directory. Please refer to the [Liquibase documentation](https://docs.liquibase.com/home.html).  
 
 
 ---------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------
 
 
-# Quarkus demo: Hibernate ORM with Panache, Kotlin and RESTEasy
-
-This is a minimal CRUD service exposing a couple of endpoints over REST,
-with a front-end based on Angular so you can play with it from your browser.
+## Setup instructions
 
 While the code is surprisingly simple, under the hood this is using:
  - RESTEasy to expose the REST endpoints
@@ -74,7 +77,7 @@ While the code is surprisingly simple, under the hood this is using:
  - Infinispan based caching
  - All safely coordinated by the Narayana Transaction Manager
 
-## Requirements
+### Requirements
 
 To compile and run this demo you will need:
 
@@ -83,7 +86,7 @@ To compile and run this demo you will need:
 
 In addition, you will need either a PostgreSQL database, or Docker to run one.
 
-### Configuring GraalVM and JDK 11+
+#### Configuring GraalVM and JDK 11+
 
 Make sure that both the `GRAALVM_HOME` and `JAVA_HOME` environment variables have
 been set, and that a JDK 11+ `java` command is on the path.
@@ -91,15 +94,15 @@ been set, and that a JDK 11+ `java` command is on the path.
 See the [Building a Native Executable guide](https://quarkus.io/guides/building-native-image)
 for help setting up your environment.
 
-## Building the demo
+### Building the demo
 
 Launch the Maven build on the checked out sources of this demo:
 
 > ./mvnw package
 
-## Running the demo
+### Running the demo
 
-### Live coding with Quarkus
+#### Live coding with Quarkus
 
 The Maven Quarkus plugin provides a development mode that supports
 live coding. To try this out:
@@ -111,7 +114,7 @@ In this mode you can make changes to the code and have the changes immediately a
     Hot reload works even when modifying your JPA entities.
     Try it! Even the database schema will be updated on the fly.
 
-### Run Quarkus in JVM mode
+#### Run Quarkus in JVM mode
 
 When you're done iterating in developer mode, you can run the application as a
 conventional jar file.
@@ -134,7 +137,7 @@ Then run it:
     Have a look at how fast it boots.
     Or measure total native memory consumption...
 
-### Run Quarkus as a native application
+#### Run Quarkus as a native application
 
 You can also create a native executable from this application without making any
 source code changes. A native executable removes the dependency on the JVM:
@@ -161,7 +164,7 @@ N.B. This implies all dependencies have been compiled to native;
 that's a whole lot of stuff: from the bytecode enhancements that Panache
 applies to your entities, to the lower level essential components such as the PostgreSQL JDBC driver, the Undertow webserver.
 
-## See the demo in your browser
+### See the demo in your browser
 
 Navigate to:
 
@@ -169,7 +172,7 @@ Navigate to:
 
 Have fun, and join the team of contributors!
 
-## Running the demo in Kubernetes
+### Running the demo in Kubernetes
 
 This section provides extra information for running both the database and the demo on Kubernetes.
 As well as running the DB on Kubernetes, a service needs to be exposed for the demo to connect to the DB.
