@@ -14,7 +14,7 @@ import javax.ws.rs.PATCH
 import javax.ws.rs.Path
 import javax.ws.rs.core.Response
 
-@Path("/api/users")
+@Path("/user")
 class UserController {
     @Inject
     lateinit var userService: UserService

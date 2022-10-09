@@ -39,7 +39,7 @@ class UserControllerTest {
         @Test
         fun `when retrieving own user information with non-existing user entity, then correct data is returned and user exists in database`() {
             RestAssured.given().auth().oauth2(accessToken)
-                .`when`()["/api/users/me"]
+                .`when`()["/api/user/me"]
                 .then()
                 .statusCode(200)
                 .body("firstName", equalTo("alice"))
@@ -51,9 +51,9 @@ class UserControllerTest {
 
         @Test
         fun `when retrieving own user information with existing user entity, then correct data is returned`() {
-            val existingUser = entityUtil.setupUser()
+            val existingUser = entityUtil.setupUser { it.mail = "alice@test.tld" }
             RestAssured.given().auth().oauth2(accessToken)
-                .`when`()["/api/users/me"]
+                .`when`()["/api/user/me"]
                 .then()
                 .statusCode(200)
                 .body("firstName", equalTo(existingUser.firstName))
@@ -65,11 +65,11 @@ class UserControllerTest {
 
         @Test
         fun `when updating own user information, then correct data is returned`() {
-            val existingUser = entityUtil.setupUser()
+            val existingUser = entityUtil.setupUser { it.mail = "alice@test.tld" }
             RestAssured.given().auth().oauth2(accessToken)
                 .contentType(ContentType.JSON)
                 .body(UserPatchDto(firstName = "new"))
-                .patch("/api/users/me")
+                .patch("/api/user/me")
                 .then()
                 .statusCode(200)
                 .body("firstName", equalTo("new"))
