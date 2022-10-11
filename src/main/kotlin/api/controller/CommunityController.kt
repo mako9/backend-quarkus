@@ -11,10 +11,12 @@ import domain.service.UserService
 import io.quarkus.panache.common.Sort
 import org.eclipse.microprofile.jwt.Claims
 import org.eclipse.microprofile.jwt.JsonWebToken
+import org.hibernate.validator.constraints.Range
 import org.jboss.resteasy.reactive.RestPath
 import java.util.*
 import javax.inject.Inject
 import javax.persistence.EntityNotFoundException
+import javax.validation.constraints.Min
 import javax.ws.rs.*
 import javax.ws.rs.core.Response
 
@@ -30,22 +32,24 @@ class CommunityController {
     @GET
     @Path("/")
     fun getCommunities(
-        pageConfig: PageConfig,
+        @QueryParam("pageNumber") @Min(0) pageNumber: Int?,
+        @QueryParam("pageSize") @Range(min = 1, max = 100) pageSize: Int?,
         @QueryParam("sortBy") sortBy: CommunitySortBy?,
         @QueryParam("sortDirection") sortDirection: Sort.Direction?,
     ): PageDto<CommunityDto> {
-        val communityModelsPage = communityService.getCommunitiesPage(pageConfig, sortBy, sortDirection)
+        val communityModelsPage = communityService.getCommunitiesPage(PageConfig(pageNumber, pageSize), sortBy, sortDirection)
         return PageDto.of(communityModelsPage, ::CommunityDto)
     }
 
     @GET
     @Path("/own")
     fun getOwnCommunities(
-        pageConfig: PageConfig,
+        @QueryParam("pageNumber") @Min(0) pageNumber: Int?,
+        @QueryParam("pageSize") @Range(min = 1, max = 100) pageSize: Int?,
     ): PageDto<CommunityDto> {
         val userUuid = getUserUuid()
 
-        val communityModelsPage = communityService.getCommunitiesPageByUser(pageConfig, userUuid)
+        val communityModelsPage = communityService.getCommunitiesPageByUser(PageConfig(pageNumber, pageSize), userUuid)
         return PageDto.of(communityModelsPage, ::CommunityDto)
     }
 

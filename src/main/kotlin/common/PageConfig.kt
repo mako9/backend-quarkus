@@ -6,4 +6,9 @@ package common
 data class PageConfig(
     val pageNumber: Int = 0,
     val pageSize: Int = 50
-)
+) {
+    constructor(pageNumber: Int?, pageSize: Int?): this(
+        pageNumber ?: 0,
+        pageSize ?: 50
+    )
+}

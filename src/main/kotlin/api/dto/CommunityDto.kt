@@ -2,6 +2,7 @@ package api.dto
 
 import domain.model.CommunityModel
 import java.util.*
+import javax.validation.constraints.Min
 
 data class CommunityDto(
     val uuid: UUID,
@@ -31,5 +32,6 @@ data class CommunityRequestDto(
     val houseNumber: String?,
     val postalCode: String?,
     val city: String?,
+    @Min(1, message = "radius must be greater 1")
     var radius: Int
 )

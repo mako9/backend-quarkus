@@ -15,8 +15,6 @@ import io.restassured.http.ContentType
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.DisplayName
-import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import testUtils.EntityUtil
 import java.util.*
@@ -47,11 +45,9 @@ class CommunityControllerTest {
     fun `when retrieving paginated communities with default pagination, then correct page is returned`() {
         val communityOne = entityUtil.setupCommunity { it.name = "one"; it.city = "one" }
         val communityTwo = entityUtil.setupCommunity { it.name = "two"; it.city = "two" }
-        val pageConfig = PageConfig()
 
         val jsonPath = RestAssured.given().auth().oauth2(accessToken)
             .contentType(ContentType.JSON)
-            .body(pageConfig)
             .`when`()["/api/user/community"]
             .then()
             .statusCode(200)
@@ -61,8 +57,8 @@ class CommunityControllerTest {
 
         assertEquals(true, jsonPath.getBoolean("firstPage"))
         assertEquals(true, jsonPath.getBoolean("lastPage"))
-        assertEquals(pageConfig.pageNumber, jsonPath.getInt("pageNumber"))
-        assertEquals(pageConfig.pageSize, jsonPath.getInt("pageSize"))
+        assertEquals(0, jsonPath.getInt("pageNumber"))
+        assertEquals(50, jsonPath.getInt("pageSize"))
         assertEquals(2, jsonPath.getInt("totalElements"))
         assertEquals(1, jsonPath.getInt("totalPages"))
         assertEquals(
@@ -81,7 +77,8 @@ class CommunityControllerTest {
 
         val jsonPath = RestAssured.given().auth().oauth2(accessToken)
             .contentType(ContentType.JSON)
-            .body(pageConfig)
+            .queryParam("pageNumber", pageConfig.pageNumber)
+            .queryParam("pageSize", pageConfig.pageSize)
             .`when`()["/api/user/community"]
             .then()
             .statusCode(200)
@@ -106,11 +103,9 @@ class CommunityControllerTest {
     fun `when retrieving paginated communities with specified sorting, then correct page is returned`() {
         val communityOne = entityUtil.setupCommunity { it.name = "one"; it.city = "one" }
         val communityTwo = entityUtil.setupCommunity { it.name = "two"; it.city = "two" }
-        val pageConfig = PageConfig()
 
         val jsonPath = RestAssured.given().auth().oauth2(accessToken)
             .contentType(ContentType.JSON)
-            .body(pageConfig)
             .queryParam("sortBy", CommunitySortBy.CITY)
             .queryParam("sortDirection", Sort.Direction.Descending)
             .`when`()["/api/user/community"]
