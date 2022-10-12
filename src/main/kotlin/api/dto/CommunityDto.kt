@@ -3,6 +3,7 @@ package api.dto
 import domain.model.CommunityModel
 import java.util.*
 import javax.validation.constraints.Min
+import javax.validation.constraints.NotBlank
 
 data class CommunityDto(
     val uuid: UUID,
@@ -27,6 +28,7 @@ data class CommunityDto(
 }
 
 data class CommunityRequestDto(
+    @NotBlank
     val name: String,
     val street: String?,
     val houseNumber: String?,

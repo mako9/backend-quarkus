@@ -124,6 +124,27 @@ class CommunityControllerTest {
     }
 
     @Test
+    fun `when retrieving my paginated communities, then correct page is returned`() {
+        val communityOne = entityUtil.setupCommunity(user.uuid) { it.name = "one"; it.city = "one" }
+        entityUtil.setupCommunity { it.name = "two"; it.city = "two" }
+
+        val jsonPath = RestAssured.given().auth().oauth2(accessToken)
+            .contentType(ContentType.JSON)
+            .`when`()["/api/user/community/my"]
+            .then()
+            .statusCode(200)
+            .extract()
+            .response()
+            .jsonPath()
+
+        assertEquals(
+            listOf(
+                CommunityDto(CommunityModel(communityOne))
+            ),
+            jsonPath.getList("content", CommunityDto::class.java))
+    }
+
+    @Test
     fun `when creating community, then community is returned`() {
         val requestDto = CommunityRequestDto(
             "test",
