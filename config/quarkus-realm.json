@@ -467,7 +467,7 @@
           "attributes": {},
           "_id": "df1b74a9-3f10-499d-a581-368de48e512b",
           "uris": [
-            "/api/users/*"
+            "/api/user/*"
           ]
         },
         {

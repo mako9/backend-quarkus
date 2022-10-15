@@ -17,11 +17,11 @@ class PolicyEnforcerTest {
     @Test
     fun testAccessUserResource() {
         RestAssured.given().auth().oauth2(getAccessToken("alice"))
-            .`when`()["/api/users/me"]
+            .`when`()["/api/user/me"]
             .then()
             .statusCode(200)
         RestAssured.given().auth().oauth2(getAccessToken("jdoe"))
-            .`when`()["/api/users/me"]
+            .`when`()["/api/user/me"]
             .then()
             .statusCode(200)
     }
