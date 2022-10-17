@@ -53,6 +53,9 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install --yes postgresql-client
+    
+    - name: Package
+      run: mvn clean package -DskipTests
       
     - name: Run tests
       run: mvn clean test -Dnative
