@@ -55,4 +55,4 @@ jobs:
         sudo apt-get install --yes postgresql-client
       
     - name: Run tests
-      run: mvn quarkus:test --fail-fast
+      run: mvn clean verify -Dnative
