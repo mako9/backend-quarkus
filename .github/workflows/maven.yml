@@ -51,8 +51,8 @@ jobs:
     
     - name: Install PostgreSQL client
       run: |
-        apt-get update
-        apt-get install --yes postgresql-client
+        sudo apt-get update
+        sudo apt-get install --yes postgresql-client
       
     - name: Run tests
       run: mvn quarkus:test
