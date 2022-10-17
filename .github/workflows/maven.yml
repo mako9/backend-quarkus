@@ -23,13 +23,13 @@ jobs:
         # `POSTGRES_HOST` is `postgres`
         env:
           # optional (defaults to `postgres`)
-          POSTGRES_DB: quarkus
+          POSTGRES_DB: quarkus_test
           # required
-          POSTGRES_PASSWORD: quarkus
+          POSTGRES_PASSWORD: quarkus_test
           # optional (defaults to `5432`)
           POSTGRES_PORT: 5432
           # optional (defaults to `postgres`)
-          POSTGRES_USER: quarkus
+          POSTGRES_USER: quarkus_test
         ports:
           # maps tcp port 5432 on service container to the host
           - 5432:5432
@@ -55,4 +55,4 @@ jobs:
         sudo apt-get install --yes postgresql-client
       
     - name: Run tests
-      run: mvn quarkus:test
+      run: mvn quarkus:test --fail-fast
