@@ -20,9 +20,6 @@ import testUtils.EntityUtil
 import java.util.*
 import javax.inject.Inject
 
-@QuarkusIntegrationTest
-class CommunityControllerIntegrationTest: CommunityControllerTest()
-
 @QuarkusTest
 class CommunityControllerTest {
     @Inject

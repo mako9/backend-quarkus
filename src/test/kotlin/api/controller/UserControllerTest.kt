@@ -17,9 +17,6 @@ import org.junit.jupiter.api.Test
 import testUtils.EntityUtil
 import javax.inject.Inject
 
-@QuarkusIntegrationTest
-class UserControllerIntegrationTest: UserControllerTest()
-
 @QuarkusTest
 class UserControllerTest {
     @Inject
