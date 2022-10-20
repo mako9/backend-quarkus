@@ -43,7 +43,9 @@ class CommunityService {
             communityModel.postalCode,
             communityModel.city,
             communityModel.adminUuid,
-            communityModel.radius
+            communityModel.radius,
+            communityModel.latitude,
+            communityModel.longitude
         )
         community.persist()
         return CommunityModel(community)
@@ -57,6 +59,8 @@ class CommunityService {
         community.postalCode = communityModel.postalCode
         community.city = communityModel.city
         community.radius = communityModel.radius
+        community.latitude = communityModel.latitude
+        community.longitude = communityModel.longitude
         community.persist()
         return CommunityModel(community)
     }
@@ -68,11 +72,11 @@ class CommunityService {
 
     private fun getCommunity(uuid: UUID): Community? {
         return Community
-            .find("#Community.getByUuid", uuid)
+            .find("uuid", uuid)
             .firstResult()
     }
 
     fun deleteCommunity(uuid: UUID) {
-        Community.delete("#Community.deleteByUuid", uuid)
+        Community.delete("uuid", uuid)
     }
 }

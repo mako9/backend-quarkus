@@ -1,8 +1,6 @@
 package api.controller
 
-import api.dto.CommunityDto
-import api.dto.CommunityRequestDto
-import api.dto.PageDto
+import api.dto.*
 import common.PageConfig
 import domain.model.CommunityModel
 import domain.model.sort.CommunitySortBy
@@ -15,7 +13,6 @@ import org.hibernate.validator.constraints.Range
 import org.jboss.resteasy.reactive.RestPath
 import java.util.*
 import javax.inject.Inject
-import javax.persistence.EntityNotFoundException
 import javax.validation.constraints.Min
 import javax.ws.rs.*
 import javax.ws.rs.core.Response
@@ -53,11 +50,27 @@ class CommunityController {
         return PageDto.of(communityModelsPage, ::CommunityDto)
     }
 
+    @GET
+    @Path("/{uuid}")
+    fun getCommunity(
+        @RestPath uuid: UUID
+    ): CommunityDetailDto {
+        val communityModel = communityService.getCommunityModel(uuid)
+            ?: throw NotFoundException("No community found for UUID: $uuid")
+        val admin = userService.getUserByUuid(communityModel.adminUuid)
+
+        val dto = CommunityDetailDto.createWithIsAdmin(communityModel, getUserUuid())
+        dto.adminFirstName = admin?.firstName
+        dto.adminLastName = admin?.lastName
+
+        return dto
+    }
+
     @POST
     @Path("/")
     fun createCommunity(
         communityRequestDto: CommunityRequestDto
-    ): CommunityDto {
+    ): CommunityDetailDto {
         val userUuid = getUserUuid()
 
         var communityModel = CommunityModel(
@@ -68,10 +81,12 @@ class CommunityController {
             communityRequestDto.postalCode,
             communityRequestDto.city,
             userUuid,
-            communityRequestDto.radius
+            communityRequestDto.radius,
+            communityRequestDto.latitude,
+            communityRequestDto.longitude
         )
         communityModel = communityService.insertCommunity(communityModel)
-        return CommunityDto(communityModel)
+        return CommunityDetailDto.createWithIsAdmin(communityModel, userUuid)
     }
 
     @PATCH
@@ -79,7 +94,7 @@ class CommunityController {
     fun updateCommunity(
         @RestPath uuid: UUID,
         communityRequestDto: CommunityRequestDto
-    ): CommunityDto {
+    ): CommunityDetailDto {
         var communityModel = communityService.getCommunityModel(uuid)
             ?: throw NotFoundException("No community found for UUID: $uuid")
 
@@ -94,7 +109,7 @@ class CommunityController {
 
         communityModel = communityService.updateCommunity(communityModel)
 
-        return CommunityDto(communityModel)
+        return CommunityDetailDto.createWithIsAdmin(communityModel, getUserUuid())
     }
 
     @DELETE
@@ -108,6 +123,17 @@ class CommunityController {
         communityService.deleteCommunity(uuid)
 
         return Response.noContent().build()
+    }
+
+    @GET
+    @Path("/{uuid}/member")
+    fun getCommunityMembers(
+        @RestPath uuid: UUID,
+        @QueryParam("pageNumber") @Min(0) pageNumber: Int?,
+        @QueryParam("pageSize") @Range(min = 1, max = 100) pageSize: Int?,
+    ): PageDto<MinimalUserDto> {
+        val userModelsPage = userService.getUsersByCommunityUuid(uuid, PageConfig(pageNumber, pageSize))
+        return PageDto.of(userModelsPage, ::MinimalUserDto)
     }
 
     private fun checkUserAdminRight(communityModel: CommunityModel) {

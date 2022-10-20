@@ -46,10 +46,12 @@ class EntityUtil {
             "36039",
             "Fulda",
             UUID.randomUUID(),
-            10
+            10,
+            20.0,
+            -30.0
         )
         intercept(community)
-        if (User.find("#User.findByUuid", community.adminUuid).firstResult() == null) {
+        if (User.find("uuid", community.adminUuid).firstResult() == null) {
             setupUser { it.uuid = community.adminUuid }
         }
         community.persist()
@@ -57,5 +59,15 @@ class EntityUtil {
             UserCommunityRelation(userUuid, community.uuid).persist()
         }
         return community
+    }
+
+    fun setupUserCommunityRelation(intercept: (UserCommunityRelation) -> Unit = {}): UserCommunityRelation {
+        val userCommunityRelation = UserCommunityRelation(
+            UUID.randomUUID(),
+            UUID.randomUUID()
+        )
+        intercept(userCommunityRelation)
+        userCommunityRelation.persist()
+        return userCommunityRelation
     }
 }

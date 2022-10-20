@@ -1,8 +1,12 @@
 package domain.service
 
+import common.PageConfig
 import common.UserRole
+import domain.model.PageModel
 import domain.model.UserModel
 import infrastructure.entity.User
+import io.quarkus.panache.common.Page
+import io.quarkus.panache.common.Parameters
 import java.util.*
 import javax.enterprise.context.ApplicationScoped
 import javax.transaction.Transactional
@@ -11,6 +15,11 @@ import javax.ws.rs.WebApplicationException
 @ApplicationScoped
 @Transactional
 class UserService {
+
+    fun getUserByUuid(uuid: UUID): UserModel? {
+        val user = User.find("uuid", uuid).firstResult() ?: return null
+        return UserModel(user)
+    }
 
     fun getUserByMail(mail: String): UserModel? {
         val user = User.find("mail", mail).firstResult() ?: return null
@@ -41,6 +50,14 @@ class UserService {
         user.city = city
         user.persist()
         return UserModel(user)
+    }
+
+    fun getUsersByCommunityUuid(communityUuid: UUID, pageConfig: PageConfig): PageModel<UserModel> {
+        val query = User
+            .find(query = "#User.getByCommunityUuid",
+                Parameters.with("communityUuid", communityUuid))
+            .page(Page.of(pageConfig.pageNumber, pageConfig.pageSize))
+        return PageModel.of(query, ::UserModel)
     }
 
     private fun createUserEntityFromUserModel(userModel: UserModel): User {

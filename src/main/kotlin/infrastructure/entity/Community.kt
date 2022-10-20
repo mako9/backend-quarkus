@@ -9,12 +9,8 @@ import javax.persistence.*
 
 @Entity
 @Cacheable
-@NamedQueries(
-    NamedQuery(name = "Community.getByUserUuid", query = "select c from Community c join UserCommunityRelation ucr on c.uuid = ucr.communityUuid where ucr.userUuid = :userUuid order by name ASC"),
-    NamedQuery(name = "Community.getByUuid", query = "from Community c where c.uuid = ?1"),
-    NamedQuery(name = "Community.deleteByUuid", query = "delete from Community c where c.uuid = ?1")
-)
-class Community : PanacheEntityBase {
+@NamedQuery(name = "Community.getByUserUuid", query = "select c from Community c join UserCommunityRelation ucr on c.uuid = ucr.communityUuid where ucr.userUuid = :userUuid order by name ASC")
+open class Community : PanacheEntityBase {
     companion object : PanacheCompanion<Community>
 
     @Column
@@ -43,6 +39,12 @@ class Community : PanacheEntityBase {
     @Column
     var radius: Int = 0
 
+    @Column
+    var latitude: Double = 0.0
+
+    @Column
+    var longitude: Double = 0.0
+
     constructor(
         uuid: UUID,
         name: String,
@@ -51,7 +53,9 @@ class Community : PanacheEntityBase {
         postalCode: String?,
         city: String?,
         adminUuid: UUID,
-        radius: Int
+        radius: Int,
+        latitude: Double,
+        longitude: Double
     ) : this() {
         this.uuid = uuid
         this.name = name
@@ -61,6 +65,8 @@ class Community : PanacheEntityBase {
         this.city = city
         this.adminUuid = adminUuid
         this.radius = radius
+        this.latitude = latitude
+        this.longitude = longitude
     }
 
     constructor()

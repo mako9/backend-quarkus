@@ -2,18 +2,20 @@ package api.controller
 
 import api.dto.CommunityDto
 import api.dto.CommunityRequestDto
+import api.dto.MinimalUserDto
 import common.PageConfig
 import domain.model.CommunityModel
+import domain.model.UserModel
 import domain.model.sort.CommunitySortBy
 import infrastructure.entity.User
 import io.quarkus.panache.common.Sort
-import io.quarkus.test.junit.QuarkusIntegrationTest
 import io.quarkus.test.junit.QuarkusTest
 import io.quarkus.test.keycloak.client.KeycloakTestClient
 import io.restassured.RestAssured
 import io.restassured.http.ContentType
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import testUtils.EntityUtil
@@ -142,15 +144,34 @@ class CommunityControllerTest {
     }
 
     @Test
+    fun `when retrieving specific community, then correct detailed community is returned`() {
+        val community = entityUtil.setupCommunity { it.name = "one"; it.city = "one"; it.adminUuid = user.uuid }
+
+        val jsonPath = RestAssured.given().auth().oauth2(accessToken)
+            .contentType(ContentType.JSON)
+            .`when`()["/api/user/community/${community.uuid}"]
+            .then()
+            .statusCode(200)
+            .extract()
+            .response()
+            .jsonPath()
+
+        assertEquals(community.name, jsonPath.getString("name"))
+        assertEquals(community.street, jsonPath.getString("street"))
+        assertEquals(community.houseNumber, jsonPath.getString("houseNumber"))
+        assertEquals(community.postalCode, jsonPath.getString("postalCode"))
+        assertEquals(community.city, jsonPath.getString("city"))
+        assertEquals(community.radius, jsonPath.getInt("radius"))
+        assertEquals(community.latitude, jsonPath.getDouble("latitude"))
+        assertEquals(community.longitude, jsonPath.getDouble("longitude"))
+        assertEquals(community.adminUuid.toString(), jsonPath.getString("adminUuid"))
+        assertEquals(user.firstName, jsonPath.getString("adminFirstName"))
+        assertEquals(user.lastName, jsonPath.getString("adminLastName"))
+    }
+
+    @Test
     fun `when creating community, then community is returned`() {
-        val requestDto = CommunityRequestDto(
-            "test",
-            null,
-            null,
-            null,
-            null,
-            10
-        )
+        val requestDto = getRequestDto("test")
         val jsonPath = RestAssured.given().auth().oauth2(accessToken)
             .contentType(ContentType.JSON)
             .body(requestDto)
@@ -162,21 +183,14 @@ class CommunityControllerTest {
             .jsonPath()
 
         assertEquals(requestDto.name, jsonPath.getString("name"))
-        assertEquals(10, jsonPath.getInt("radius"))
-        assertEquals(user.uuid, jsonPath.getUUID("adminUuid"))
+        assertEquals(11, jsonPath.getInt("radius"))
+        assertTrue(jsonPath.getBoolean("admin"))
     }
 
     @Test
     fun `when updating community, then updated community is returned`() {
         val community = entityUtil.setupCommunity { it.adminUuid = user.uuid }
-        val requestDto = CommunityRequestDto(
-            "test - update",
-            "street - update",
-            null,
-            null,
-            null,
-            11
-        )
+        val requestDto = getRequestDto("test - update")
         val jsonPath = RestAssured.given().auth().oauth2(accessToken)
             .contentType(ContentType.JSON)
             .body(requestDto)
@@ -195,14 +209,7 @@ class CommunityControllerTest {
     @Test
     fun `when updating community when not admin, then 403 is returned`() {
         val community = entityUtil.setupCommunity()
-        val requestDto = CommunityRequestDto(
-            "test - update",
-            "street - update",
-            null,
-            null,
-            null,
-            11
-        )
+        val requestDto = getRequestDto("test - update")
         RestAssured.given().auth().oauth2(accessToken)
             .contentType(ContentType.JSON)
             .body(requestDto)
@@ -213,14 +220,7 @@ class CommunityControllerTest {
 
     @Test
     fun `when updating non existing community, then 404 is returned`() {
-        val requestDto = CommunityRequestDto(
-            "test - update",
-            "street - update",
-            null,
-            null,
-            null,
-            11
-        )
+        val requestDto = getRequestDto("test - update")
         RestAssured.given().auth().oauth2(accessToken)
             .contentType(ContentType.JSON)
             .body(requestDto)
@@ -258,9 +258,53 @@ class CommunityControllerTest {
             .statusCode(404)
     }
 
+    @Test
+    fun `when retrieving paginated community members, then correct page is returned`() {
+        val userOne = entityUtil.setupUser { it.firstName = "One"; it.lastName = "One" }
+        val userTwo = entityUtil.setupUser { it.firstName = "Two"; it.lastName = "Two" }
+        val community = entityUtil.setupCommunity { it.adminUuid = user.uuid }
+        entityUtil.setupUserCommunityRelation { it.communityUuid = community.uuid; it.userUuid = userOne.uuid }
+        entityUtil.setupUserCommunityRelation { it.communityUuid = community.uuid; it.userUuid = userTwo.uuid }
+
+        val jsonPath = RestAssured.given().auth().oauth2(accessToken)
+            .contentType(ContentType.JSON)
+            .`when`()["/api/user/community/${community.uuid}/member"]
+            .then()
+            .statusCode(200)
+            .extract()
+            .response()
+            .jsonPath()
+
+        assertEquals(true, jsonPath.getBoolean("firstPage"))
+        assertEquals(true, jsonPath.getBoolean("lastPage"))
+        assertEquals(0, jsonPath.getInt("pageNumber"))
+        assertEquals(50, jsonPath.getInt("pageSize"))
+        assertEquals(2, jsonPath.getInt("totalElements"))
+        assertEquals(1, jsonPath.getInt("totalPages"))
+        assertEquals(
+            listOf(
+                MinimalUserDto(UserModel(userOne)),
+                MinimalUserDto(UserModel(userTwo))
+            ),
+            jsonPath.getList("content", MinimalUserDto::class.java))
+    }
+
     companion object {
         init {
             RestAssured.useRelaxedHTTPSValidation()
         }
+    }
+
+    private fun getRequestDto(name: String): CommunityRequestDto {
+        return CommunityRequestDto(
+            name,
+            "street",
+            null,
+            null,
+            null,
+            11,
+            20.0,
+            30.0
+        )
     }
 }
