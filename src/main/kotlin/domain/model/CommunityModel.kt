@@ -11,7 +11,9 @@ data class CommunityModel (
     var postalCode: String?,
     var city: String?,
     var adminUuid: UUID,
-    var radius: Int
+    var radius: Int,
+    var latitude: Double,
+    var longitude: Double
 ) {
     constructor(community: Community): this(
         community.uuid,
@@ -21,6 +23,8 @@ data class CommunityModel (
         community.postalCode,
         community.city,
         community.adminUuid,
-        community.radius
+        community.radius,
+        community.latitude,
+        community.longitude
     )
 }

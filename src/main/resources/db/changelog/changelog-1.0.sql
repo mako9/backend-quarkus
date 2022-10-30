@@ -30,6 +30,8 @@ CREATE TABLE "community" (
     city VARCHAR(100),
     admin_uuid CHAR(36) NOT NULL,
     radius INTEGER NOT NULL,
+    latitude DECIMAL NOT NULL,
+    longitude DECIMAL NOT NULL,
     CONSTRAINT "uc_community__name" UNIQUE ("name"),
     CONSTRAINT "fc_community__user_uuid" FOREIGN KEY (admin_uuid) REFERENCES "user"(uuid)
 );

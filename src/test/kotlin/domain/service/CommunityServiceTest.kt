@@ -107,11 +107,13 @@ class CommunityServiceTest {
                 null,
                 null,
                 user.uuid,
-                10
+                10,
+                20.0,
+                30.0
             )
             val result = communityService.insertCommunity(communityModel)
             assertEquals(communityModel, result)
-            assertNotNull(Community.find("#Community.getByUuid", communityModel.uuid).firstResult())
+            assertNotNull(Community.find("uuid", communityModel.uuid).firstResult())
         }
 
         @Test
@@ -125,10 +127,12 @@ class CommunityServiceTest {
                 null,
                 null,
                 user.uuid,
-                11
+                11,
+                20.0,
+                30.0
             )
             val result = communityService.updateCommunity(communityModel)
-            val updatedCommunity = Community.find("#Community.getByUuid", communityModel.uuid).firstResult()
+            val updatedCommunity = Community.find("uuid", communityModel.uuid).firstResult()
             assertEquals(communityModel, result)
             assertEquals(communityModel.name, updatedCommunity?.name)
             assertEquals(communityModel.street, updatedCommunity?.street)
@@ -152,7 +156,7 @@ class CommunityServiceTest {
         fun `when deleting specific community, then correct community is deleted`() {
             val community = entityUtil.setupCommunity()
             communityService.deleteCommunity(community.uuid)
-            assertNull(Community.find("#Community.getByUuid", community.uuid).firstResult())
+            assertNull(Community.find("uuid", community.uuid).firstResult())
         }
     }
 }

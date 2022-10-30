@@ -22,7 +22,7 @@ import javax.persistence.*
         )
     ]
     )
-@NamedQuery(name = "User.findByUuid", query = "from User u where u.uuid = ?1")
+@NamedQuery(name = "User.getByCommunityUuid", query = "select u from User u join UserCommunityRelation ucr on u.uuid = ucr.userUuid where ucr.communityUuid = :communityUuid order by u.lastName ASC")
 class User : PanacheEntityBase {
     companion object : PanacheCompanion<User>
 
