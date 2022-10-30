@@ -10,7 +10,7 @@ import javax.persistence.*
 @Entity
 @Cacheable
 @NamedQuery(name = "Community.getByUserUuid", query = "select c from Community c join UserCommunityRelation ucr on c.uuid = ucr.communityUuid where ucr.userUuid = :userUuid order by name ASC")
-open class Community : PanacheEntityBase {
+class Community : PanacheEntityBase {
     companion object : PanacheCompanion<Community>
 
     @Column

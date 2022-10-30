@@ -40,7 +40,7 @@ class CommunityController {
 
     @GET
     @Path("/my")
-    fun getOwnCommunities(
+    fun getMyCommunities(
         @QueryParam("pageNumber") @Min(0) pageNumber: Int?,
         @QueryParam("pageSize") @Range(min = 1, max = 100) pageSize: Int?,
     ): PageDto<CommunityDto> {

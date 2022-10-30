@@ -5,6 +5,7 @@ import domain.model.CommunityModel
 import domain.model.PageModel
 import domain.model.sort.CommunitySortBy
 import infrastructure.entity.Community
+import infrastructure.entity.UserCommunityRelation
 import io.quarkus.panache.common.Page
 import io.quarkus.panache.common.Parameters
 import io.quarkus.panache.common.Sort
@@ -48,6 +49,10 @@ class CommunityService {
             communityModel.longitude
         )
         community.persist()
+        UserCommunityRelation(
+            community.adminUuid,
+            communityModel.uuid
+        ).persist()
         return CommunityModel(community)
     }
 
