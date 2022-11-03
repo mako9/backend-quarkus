@@ -48,7 +48,8 @@ class EntityUtil {
             UUID.randomUUID(),
             10,
             20.0,
-            -30.0
+            -30.0,
+            true
         )
         intercept(community)
         if (User.find("uuid", community.adminUuid).firstResult() == null) {

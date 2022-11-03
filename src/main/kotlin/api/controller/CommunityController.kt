@@ -85,7 +85,8 @@ class CommunityController {
             userUuid,
             communityRequestDto.radius,
             communityRequestDto.latitude,
-            communityRequestDto.longitude
+            communityRequestDto.longitude,
+            communityRequestDto.canBeJoined
         )
         communityModel = communityService.insertCommunity(communityModel)
         return CommunityDetailDto.createWithIsAdmin(communityModel, userUuid)
@@ -108,6 +109,7 @@ class CommunityController {
         communityModel.postalCode = communityRequestDto.postalCode
         communityModel.city = communityRequestDto.city
         communityModel.radius = communityRequestDto.radius
+        communityModel.canBeJoined  = communityRequestDto.canBeJoined
 
         communityModel = communityService.updateCommunity(communityModel)
 

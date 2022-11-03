@@ -3,6 +3,7 @@ package domain.service
 import common.PageConfig
 import domain.model.CommunityModel
 import domain.model.PageModel
+import domain.model.exception.CustomBadRequestException
 import domain.model.sort.CommunitySortBy
 import infrastructure.entity.Community
 import infrastructure.entity.UserCommunityRelation
@@ -46,7 +47,8 @@ class CommunityService {
             communityModel.adminUuid,
             communityModel.radius,
             communityModel.latitude,
-            communityModel.longitude
+            communityModel.longitude,
+            communityModel.canBeJoined
         )
         community.persist()
         UserCommunityRelation(
@@ -86,7 +88,8 @@ class CommunityService {
     }
 
     fun joinCommunity(userUuid: UUID, communityUuid: UUID) {
-        getCommunity(communityUuid) ?: throw EntityNotFoundException("No community for UUID: $communityUuid")
+        val community = getCommunity(communityUuid) ?: throw EntityNotFoundException("No community for UUID: $communityUuid")
+        if (!community.canBeJoined) throw CustomBadRequestException("Community can not be joined.")
         UserCommunityRelation(
             userUuid,
             communityUuid

@@ -32,6 +32,7 @@ CREATE TABLE "community" (
     radius INTEGER NOT NULL,
     latitude DECIMAL NOT NULL,
     longitude DECIMAL NOT NULL,
+    can_be_joined BOOLEAN NOT NULL DEFAULT FALSE,
     CONSTRAINT "uc_community__name" UNIQUE ("name"),
     CONSTRAINT "fc_community__user_uuid" FOREIGN KEY (admin_uuid) REFERENCES "user"(uuid)
 );

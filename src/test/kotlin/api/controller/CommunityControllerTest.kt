@@ -167,6 +167,7 @@ class CommunityControllerTest {
         assertEquals(community.adminUuid.toString(), jsonPath.getString("adminUuid"))
         assertEquals(user.firstName, jsonPath.getString("adminFirstName"))
         assertEquals(user.lastName, jsonPath.getString("adminLastName"))
+        assertEquals(community.canBeJoined, jsonPath.getBoolean("canBeJoined"))
     }
 
     @Test
@@ -309,6 +310,17 @@ class CommunityControllerTest {
             .statusCode(404)
     }
 
+    @Test
+    fun `when joining non-joinable community, then status 400 is returned`() {
+        val community = entityUtil.setupCommunity { it.canBeJoined = false }
+
+        RestAssured.given().auth().oauth2(accessToken)
+            .contentType(ContentType.JSON)
+            .`when`()["/api/user/community/${community.uuid}/join"]
+            .then()
+            .statusCode(400)
+    }
+
 
     companion object {
         init {
@@ -325,7 +337,8 @@ class CommunityControllerTest {
             null,
             11,
             20.0,
-            30.0
+            30.0,
+            true
         )
     }
 }

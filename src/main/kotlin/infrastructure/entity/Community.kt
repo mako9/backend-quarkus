@@ -45,6 +45,9 @@ class Community : PanacheEntityBase {
     @Column
     var longitude: Double = 0.0
 
+    @Column(name = "can_be_joined")
+    var canBeJoined: Boolean = false
+
     constructor(
         uuid: UUID,
         name: String,
@@ -55,7 +58,8 @@ class Community : PanacheEntityBase {
         adminUuid: UUID,
         radius: Int,
         latitude: Double,
-        longitude: Double
+        longitude: Double,
+        canBeJoined: Boolean
     ) : this() {
         this.uuid = uuid
         this.name = name
@@ -67,6 +71,7 @@ class Community : PanacheEntityBase {
         this.radius = radius
         this.latitude = latitude
         this.longitude = longitude
+        this.canBeJoined = canBeJoined
     }
 
     constructor()

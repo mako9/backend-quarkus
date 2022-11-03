@@ -2,6 +2,7 @@ package domain.service
 
 import common.PageConfig
 import domain.model.CommunityModel
+import domain.model.exception.CustomBadRequestException
 import domain.model.sort.CommunitySortBy
 import infrastructure.entity.Community
 import infrastructure.entity.User
@@ -111,7 +112,8 @@ class CommunityServiceTest {
                 user.uuid,
                 10,
                 20.0,
-                30.0
+                30.0,
+                true
             )
             val result = communityService.insertCommunity(communityModel)
             assertEquals(communityModel, result)
@@ -131,7 +133,8 @@ class CommunityServiceTest {
                 user.uuid,
                 11,
                 20.0,
-                30.0
+                30.0,
+                true
             )
             val result = communityService.updateCommunity(communityModel)
             val updatedCommunity = Community.find("uuid", communityModel.uuid).firstResult()
@@ -177,6 +180,15 @@ class CommunityServiceTest {
             val unknownUuid = UUID.randomUUID()
             assertThrows<EntityNotFoundException>("No community for UUID: $unknownUuid") {
                 communityService.joinCommunity(user.uuid, unknownUuid)
+            }
+        }
+
+        @Test
+        fun `when joining non-joinable community, then correct Exception is thrown`() {
+            val user = entityUtil.setupUser()
+            val community = entityUtil.setupCommunity {  it.canBeJoined = false }
+            assertThrows<CustomBadRequestException>("Forbidden: Community can not be joined.") {
+                communityService.joinCommunity(user.uuid, community.uuid)
             }
         }
     }
