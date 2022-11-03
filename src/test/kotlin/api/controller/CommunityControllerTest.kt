@@ -289,6 +289,27 @@ class CommunityControllerTest {
             jsonPath.getList("content", MinimalUserDto::class.java))
     }
 
+    @Test
+    fun `when joining specific community successfully, then status 204 is returned`() {
+        val community = entityUtil.setupCommunity()
+
+        RestAssured.given().auth().oauth2(accessToken)
+            .contentType(ContentType.JSON)
+            .`when`()["/api/user/community/${community.uuid}/join"]
+            .then()
+            .statusCode(204)
+    }
+
+    @Test
+    fun `when joining non-existing community, then status 404 is returned`() {
+        RestAssured.given().auth().oauth2(accessToken)
+            .contentType(ContentType.JSON)
+            .`when`()["/api/user/community/${UUID.randomUUID()}/join"]
+            .then()
+            .statusCode(404)
+    }
+
+
     companion object {
         init {
             RestAssured.useRelaxedHTTPSValidation()

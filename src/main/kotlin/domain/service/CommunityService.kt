@@ -84,4 +84,12 @@ class CommunityService {
     fun deleteCommunity(uuid: UUID) {
         Community.delete("uuid", uuid)
     }
+
+    fun joinCommunity(userUuid: UUID, communityUuid: UUID) {
+        getCommunity(communityUuid) ?: throw EntityNotFoundException("No community for UUID: $communityUuid")
+        UserCommunityRelation(
+            userUuid,
+            communityUuid
+        ).persist()
+    }
 }

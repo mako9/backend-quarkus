@@ -5,6 +5,7 @@ import domain.model.CommunityModel
 import domain.model.sort.CommunitySortBy
 import infrastructure.entity.Community
 import infrastructure.entity.User
+import infrastructure.entity.UserCommunityRelation
 import io.quarkus.panache.common.Sort
 import io.quarkus.test.junit.QuarkusTest
 import org.junit.jupiter.api.*
@@ -12,6 +13,7 @@ import org.junit.jupiter.api.Assertions.*
 import testUtils.EntityUtil
 import java.util.*
 import javax.inject.Inject
+import javax.persistence.EntityNotFoundException
 
 @QuarkusTest
 class CommunityServiceTest {
@@ -157,6 +159,25 @@ class CommunityServiceTest {
             val community = entityUtil.setupCommunity()
             communityService.deleteCommunity(community.uuid)
             assertNull(Community.find("uuid", community.uuid).firstResult())
+        }
+
+        @Test
+        fun `when joining specific community, then correct UserCommunityRelation entity exists`() {
+            val user = entityUtil.setupUser()
+            val community = entityUtil.setupCommunity()
+            communityService.joinCommunity(user.uuid, community.uuid)
+            val relation = UserCommunityRelation.find("userUuid", user.uuid).firstResult()
+            assertEquals(user.uuid, relation?.userUuid)
+            assertEquals(community.uuid, relation?.communityUuid)
+        }
+
+        @Test
+        fun `when joining non-existing community, then correct Exception is thrown`() {
+            val user = entityUtil.setupUser()
+            val unknownUuid = UUID.randomUUID()
+            assertThrows<EntityNotFoundException>("No community for UUID: $unknownUuid") {
+                communityService.joinCommunity(user.uuid, unknownUuid)
+            }
         }
     }
 }

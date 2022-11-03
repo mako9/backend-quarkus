@@ -7,9 +7,11 @@ import domain.model.sort.CommunitySortBy
 import domain.service.CommunityService
 import domain.service.UserService
 import io.quarkus.panache.common.Sort
+import org.apache.http.HttpStatus
 import org.eclipse.microprofile.jwt.Claims
 import org.eclipse.microprofile.jwt.JsonWebToken
 import org.hibernate.validator.constraints.Range
+import org.jboss.resteasy.reactive.ResponseStatus
 import org.jboss.resteasy.reactive.RestPath
 import java.util.*
 import javax.inject.Inject
@@ -114,6 +116,7 @@ class CommunityController {
 
     @DELETE
     @Path("/{uuid}")
+    @ResponseStatus(HttpStatus.SC_NO_CONTENT)
     fun deleteCommunity(
         @RestPath uuid: UUID
     ): Response {
@@ -134,6 +137,17 @@ class CommunityController {
     ): PageDto<MinimalUserDto> {
         val userModelsPage = userService.getUsersByCommunityUuid(uuid, PageConfig(pageNumber, pageSize))
         return PageDto.of(userModelsPage, ::MinimalUserDto)
+    }
+
+    @GET
+    @Path("/{uuid}/join")
+    @ResponseStatus(HttpStatus.SC_NO_CONTENT)
+    fun joinCommunity(
+        @RestPath uuid: UUID,
+    ): Response {
+        val userUuid = getUserUuid()
+        communityService.joinCommunity(userUuid, uuid)
+        return Response.noContent().build()
     }
 
     private fun checkUserAdminRight(communityModel: CommunityModel) {
