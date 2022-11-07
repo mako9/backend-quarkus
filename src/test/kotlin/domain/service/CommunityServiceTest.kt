@@ -6,6 +6,7 @@ import domain.model.exception.CustomBadRequestException
 import domain.model.sort.CommunitySortBy
 import infrastructure.entity.Community
 import infrastructure.entity.User
+import infrastructure.entity.UserCommunityJoinRequest
 import infrastructure.entity.UserCommunityRelation
 import io.quarkus.panache.common.Sort
 import io.quarkus.test.junit.QuarkusTest
@@ -165,13 +166,13 @@ class CommunityServiceTest {
         }
 
         @Test
-        fun `when joining specific community, then correct UserCommunityRelation entity exists`() {
+        fun `when joining specific community, then correct UserCommunityJoinRequest entity exists`() {
             val user = entityUtil.setupUser()
             val community = entityUtil.setupCommunity()
             communityService.joinCommunity(user.uuid, community.uuid)
-            val relation = UserCommunityRelation.find("userUuid", user.uuid).firstResult()
-            assertEquals(user.uuid, relation?.userUuid)
-            assertEquals(community.uuid, relation?.communityUuid)
+            val request = UserCommunityJoinRequest.find("userUuid", user.uuid).firstResult()
+            assertEquals(user.uuid, request?.userUuid)
+            assertEquals(community.uuid, request?.communityUuid)
         }
 
         @Test
@@ -189,6 +190,77 @@ class CommunityServiceTest {
             val community = entityUtil.setupCommunity {  it.canBeJoined = false }
             assertThrows<CustomBadRequestException>("Forbidden: Community can not be joined.") {
                 communityService.joinCommunity(user.uuid, community.uuid)
+            }
+        }
+
+        @Test
+        fun `when leaving specific community, then correct UserCommunityRelation is deleted`() {
+            val user = entityUtil.setupUser()
+            val community = entityUtil.setupCommunity()
+            entityUtil.setupUserCommunityRelation { it.userUuid = user.uuid; it.communityUuid = community.uuid }
+            communityService.leaveCommunity(user.uuid, community.uuid)
+            assertNull(UserCommunityRelation.find("userUuid", user.uuid).firstResult())
+        }
+
+        @Test
+        fun `when leaving non-existing community, then correct error is thrown`() {
+            val user = entityUtil.setupUser()
+            val unknownUuid = UUID.randomUUID()
+            assertThrows<EntityNotFoundException>("No community for UUID: $unknownUuid") {
+                communityService.leaveCommunity(user.uuid, unknownUuid)
+            }
+        }
+
+        @Test
+        fun `when leaving non-joined community, then correct error is thrown`() {
+            val user = entityUtil.setupUser()
+            val community = entityUtil.setupCommunity()
+            assertThrows<CustomBadRequestException>("Not a member of community: ${community.uuid}") {
+                communityService.leaveCommunity(user.uuid, community.uuid)
+            }
+        }
+
+        @Test
+        fun `when approving a join request, then correct entities exist`() {
+            val userOne = entityUtil.setupUser()
+            val userTwo = entityUtil.setupUser { it.mail = "test2@test.tld" }
+            val community = entityUtil.setupCommunity()
+            entityUtil.setupUserCommunityJoinRequest { it.communityUuid = community.uuid; it.userUuid = userOne.uuid }
+            entityUtil.setupUserCommunityJoinRequest { it.communityUuid = community.uuid; it.userUuid = userTwo.uuid }
+            communityService.approveRequestsForUsers(community.uuid, listOf(userOne.uuid, userTwo.uuid))
+            assertNotNull(UserCommunityRelation.find("communityUuid = ?1 AND userUuid = ?2", community.uuid, userOne.uuid).firstResult())
+            assertNotNull(UserCommunityRelation.find("communityUuid = ?1 AND userUuid = ?2", community.uuid, userTwo.uuid).firstResult())
+            assertNull(UserCommunityJoinRequest.find("communityUuid = ?1 AND userUuid = ?2", community.uuid, userOne.uuid).firstResult())
+            assertNull(UserCommunityJoinRequest.find("communityUuid = ?1 AND userUuid = ?2", community.uuid, userTwo.uuid).firstResult())
+        }
+
+        @Test
+        fun `when approving non-existing request, then correct Exception is thrown`() {
+            val user = entityUtil.setupUser()
+            val community = entityUtil.setupCommunity()
+            assertThrows<CustomBadRequestException>("No requests found for users: ${listOf(user.uuid)}") {
+                communityService.approveRequestsForUsers(community.uuid, listOf(user.uuid))
+            }
+        }
+
+        @Test
+        fun `when declining a join request, then requests are deleted`() {
+            val userOne = entityUtil.setupUser()
+            val userTwo = entityUtil.setupUser { it.mail = "test2@test.tld" }
+            val community = entityUtil.setupCommunity()
+            entityUtil.setupUserCommunityJoinRequest { it.communityUuid = community.uuid; it.userUuid = userOne.uuid }
+            entityUtil.setupUserCommunityJoinRequest { it.communityUuid = community.uuid; it.userUuid = userTwo.uuid }
+            communityService.declineRequestsForUsers(community.uuid, listOf(userOne.uuid, userTwo.uuid))
+            assertNull(UserCommunityJoinRequest.find("communityUuid = ?1 AND userUuid = ?2", community.uuid, userOne.uuid).firstResult())
+            assertNull(UserCommunityJoinRequest.find("communityUuid = ?1 AND userUuid = ?2", community.uuid, userTwo.uuid).firstResult())
+        }
+
+        @Test
+        fun `when declining non-existing request, then correct exception is thrown`() {
+            val user = entityUtil.setupUser()
+            val community = entityUtil.setupCommunity()
+            assertThrows<CustomBadRequestException>("No requests found for users: ${listOf(user.uuid)}") {
+                communityService.declineRequestsForUsers(community.uuid, listOf(user.uuid))
             }
         }
     }

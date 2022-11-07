@@ -7,6 +7,7 @@ import io.quarkus.hibernate.orm.panache.kotlin.PanacheEntityBase
 import org.hibernate.annotations.Parameter
 import org.hibernate.annotations.Type
 import org.hibernate.annotations.TypeDef
+import java.time.OffsetDateTime
 import java.util.*
 import javax.persistence.*
 
@@ -22,7 +23,10 @@ import javax.persistence.*
         )
     ]
     )
-@NamedQuery(name = "User.getByCommunityUuid", query = "select u from User u join UserCommunityRelation ucr on u.uuid = ucr.userUuid where ucr.communityUuid = :communityUuid order by u.lastName ASC")
+@NamedQueries(
+    NamedQuery(name = "User.getByCommunityUuid", query = "select u from User u join UserCommunityRelation ucr on u.uuid = ucr.userUuid where ucr.communityUuid = :communityUuid order by u.lastName ASC"),
+    NamedQuery(name = "User.getWithRequestByCommunityUuid", query = "select u from User u join UserCommunityJoinRequest ucjr on u.uuid = ucjr.userUuid where ucjr.communityUuid = :communityUuid order by u.lastName ASC")
+)
 class User : PanacheEntityBase {
     companion object : PanacheCompanion<User>
 
@@ -52,6 +56,12 @@ class User : PanacheEntityBase {
     @Column(length = 100)
     var city: String? = null
 
+    @Column(name = "created_at")
+    lateinit var createdAt: OffsetDateTime
+
+    @Column(name = "updated_at")
+    lateinit var updatedAt: OffsetDateTime
+
     @Column(name = "roles")
     @Type(type = "pgsql_enum")
     lateinit var roles: Array<UserRole>
@@ -76,6 +86,8 @@ class User : PanacheEntityBase {
         this.postalCode = postalCode
         this.city = city
         this.roles = roles.toTypedArray()
+        this.createdAt = OffsetDateTime.now()
+        this.updatedAt = OffsetDateTime.now()
     }
 
     constructor()

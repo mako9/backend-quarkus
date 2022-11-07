@@ -57,13 +57,15 @@ class CommunityController {
     fun getCommunity(
         @RestPath uuid: UUID
     ): CommunityDetailDto {
+        val userUuid = getUserUuid()
         val communityModel = communityService.getCommunityModel(uuid)
             ?: throw NotFoundException("No community found for UUID: $uuid")
         val admin = userService.getUserByUuid(communityModel.adminUuid)
 
-        val dto = CommunityDetailDto.createWithIsAdmin(communityModel, getUserUuid())
+        val dto = CommunityDetailDto.createWithIsAdmin(communityModel, userUuid)
         dto.adminFirstName = admin?.firstName
         dto.adminLastName = admin?.lastName
+        dto.isMember = communityService.isUserCommunityMember(userUuid)
 
         return dto
     }
@@ -149,6 +151,59 @@ class CommunityController {
     ): Response {
         val userUuid = getUserUuid()
         communityService.joinCommunity(userUuid, uuid)
+        return Response.noContent().build()
+    }
+
+    @GET
+    @Path("/{uuid}/leave")
+    @ResponseStatus(HttpStatus.SC_NO_CONTENT)
+    fun leaveCommunity(
+        @RestPath uuid: UUID,
+    ): Response {
+        val userUuid = getUserUuid()
+        communityService.leaveCommunity(userUuid, uuid)
+        return Response.noContent().build()
+    }
+
+    @GET
+    @Path("/{uuid}/requesting-member")
+    fun getCommunityJoinRequests(
+        @RestPath uuid: UUID,
+        @QueryParam("pageNumber") @Min(0) pageNumber: Int?,
+        @QueryParam("pageSize") @Range(min = 1, max = 100) pageSize: Int?
+    ): PageDto<MinimalUserDto> {
+        val communityModel = communityService.getCommunityModel(uuid)
+            ?: throw NotFoundException("No community found for UUID: $uuid")
+        checkUserAdminRight(communityModel)
+        val userModelsPage = userService.getUsersWithRequestByCommunityUuid(uuid, PageConfig(pageNumber, pageSize))
+        return PageDto.of(userModelsPage, ::MinimalUserDto)
+    }
+
+    @POST
+    @Path("/{uuid}/request/approve")
+    fun approveJoinRequests(
+        @RestPath uuid: UUID,
+        userUuids: List<UUID>
+    ): List<MinimalUserDto> {
+        val communityModel = communityService.getCommunityModel(uuid)
+            ?: throw NotFoundException("No community found for UUID: $uuid")
+        checkUserAdminRight(communityModel)
+        communityService.approveRequestsForUsers(uuid, userUuids)
+        val userModels = userService.getUsersByUuid(userUuids)
+        return userModels.map { MinimalUserDto(it) }
+    }
+
+    @POST
+    @Path("/{uuid}/request/decline")
+    @ResponseStatus(HttpStatus.SC_NO_CONTENT)
+    fun declineJoinRequests(
+        @RestPath uuid: UUID,
+        userUuids: List<UUID>
+    ): Response {
+        val communityModel = communityService.getCommunityModel(uuid)
+            ?: throw NotFoundException("No community found for UUID: $uuid")
+        checkUserAdminRight(communityModel)
+        communityService.declineRequestsForUsers(uuid, userUuids)
         return Response.noContent().build()
     }
 

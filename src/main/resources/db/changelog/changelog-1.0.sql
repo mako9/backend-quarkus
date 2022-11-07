@@ -14,6 +14,8 @@ CREATE TABLE "user" (
     house_number VARCHAR(10),
     postal_code VARCHAR(5),
     city VARCHAR(100),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     roles user_role ARRAY NOT NULL,
     CONSTRAINT "uc_user__mail" UNIQUE (mail)
 );
@@ -33,6 +35,8 @@ CREATE TABLE "community" (
     latitude DECIMAL NOT NULL,
     longitude DECIMAL NOT NULL,
     can_be_joined BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT "uc_community__name" UNIQUE ("name"),
     CONSTRAINT "fc_community__user_uuid" FOREIGN KEY (admin_uuid) REFERENCES "user"(uuid)
 );
@@ -41,9 +45,20 @@ CREATE TABLE "community" (
 CREATE TABLE "user_community_relation" (
     user_uuid CHAR(36) NOT NULL,
     community_uuid CHAR(36) NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY (user_uuid, community_uuid),
     CONSTRAINT "fc_user_community_relation__user_uuid" FOREIGN KEY (user_uuid) REFERENCES "user"(uuid),
     CONSTRAINT "fc_user_community_relation__community_uuid" FOREIGN KEY (community_uuid) REFERENCES "community"(uuid)
+);
+--rollback DROP TABLE user_community_relation;
+
+CREATE TABLE "user_community_join_request" (
+    user_uuid CHAR(36) NOT NULL,
+    community_uuid CHAR(36) NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (user_uuid, community_uuid),
+    CONSTRAINT "fc_user_community_join_request__user_uuid" FOREIGN KEY (user_uuid) REFERENCES "user"(uuid),
+    CONSTRAINT "fc_user_community_join_request__community_uuid" FOREIGN KEY (community_uuid) REFERENCES "community"(uuid)
 );
 --rollback DROP TABLE user_community_relation;
 

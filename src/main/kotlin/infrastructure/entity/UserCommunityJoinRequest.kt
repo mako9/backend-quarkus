@@ -10,10 +10,10 @@ import javax.persistence.*
 
 @Entity
 @Cacheable
-@Table(name = "user_community_relation")
-@IdClass(UserCommunityRelationId::class)
-class UserCommunityRelation : PanacheEntityBase {
-    companion object : PanacheCompanion<UserCommunityRelation>
+@Table(name = "user_community_join_request")
+@IdClass(UserCommunityJoinRequestId::class)
+class UserCommunityJoinRequest : PanacheEntityBase {
+    companion object : PanacheCompanion<UserCommunityJoinRequest>
 
     @Column(name = "user_uuid")
     @Id
@@ -40,7 +40,7 @@ class UserCommunityRelation : PanacheEntityBase {
     constructor()
 }
 
-private data class UserCommunityRelationId(
+private data class UserCommunityJoinRequestId(
     val userUuid: UUID = UUID.randomUUID(),
     val communityUuid: UUID = UUID.randomUUID()
 ): Serializable

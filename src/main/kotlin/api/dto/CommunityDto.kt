@@ -36,7 +36,8 @@ data class CommunityDetailDto(
     var adminUuid: UUID,
     var adminFirstName: String? = null,
     var adminLastName: String? = null,
-    var canBeJoined: Boolean
+    var canBeJoined: Boolean,
+    var isMember: Boolean = false
 ) {
 
     companion object {

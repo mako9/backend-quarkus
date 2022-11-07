@@ -6,6 +6,7 @@ import domain.model.PageModel
 import domain.model.exception.CustomBadRequestException
 import domain.model.sort.CommunitySortBy
 import infrastructure.entity.Community
+import infrastructure.entity.UserCommunityJoinRequest
 import infrastructure.entity.UserCommunityRelation
 import io.quarkus.panache.common.Page
 import io.quarkus.panache.common.Parameters
@@ -84,15 +85,49 @@ class CommunityService {
     }
 
     fun deleteCommunity(uuid: UUID) {
+        UserCommunityRelation.delete("communityUuid", uuid)
         Community.delete("uuid", uuid)
     }
 
     fun joinCommunity(userUuid: UUID, communityUuid: UUID) {
         val community = getCommunity(communityUuid) ?: throw EntityNotFoundException("No community for UUID: $communityUuid")
         if (!community.canBeJoined) throw CustomBadRequestException("Community can not be joined.")
-        UserCommunityRelation(
+        UserCommunityJoinRequest(
             userUuid,
             communityUuid
         ).persist()
+    }
+
+    fun leaveCommunity(userUuid: UUID, communityUuid: UUID) {
+        getCommunity(communityUuid) ?: throw EntityNotFoundException("No community for UUID: $communityUuid")
+        val relation = UserCommunityRelation.find("userUuid = ?1 AND communityUuid = ?2", userUuid, communityUuid).firstResult() ?: throw CustomBadRequestException("Not a member of community: $communityUuid")
+        relation.delete()
+    }
+
+    fun approveRequestsForUsers(communityUuid: UUID, userUuids: List<UUID>) {
+        val requests = getRequests(communityUuid, userUuids)
+        val userCommunityRelations = requests.map { UserCommunityRelation(it.userUuid, it.communityUuid) }
+        UserCommunityRelation.persist(userCommunityRelations)
+        UserCommunityJoinRequest
+            .delete("communityUuid = ?1 AND userUuid IN ?2", communityUuid, userUuids)
+    }
+
+    fun declineRequestsForUsers(communityUuid: UUID, userUuids: List<UUID>) {
+        getRequests(communityUuid, userUuids)
+        UserCommunityJoinRequest
+            .delete("communityUuid = ?1 AND userUuid IN ?2", communityUuid, userUuids)
+    }
+
+    fun isUserCommunityMember(userUuid: UUID): Boolean {
+        return UserCommunityRelation.find("userUuid", userUuid).firstResult() != null
+    }
+
+    private fun getRequests(communityUuid: UUID, userUuids: List<UUID>): List<UserCommunityJoinRequest>  {
+        val requests = UserCommunityJoinRequest
+            .find("communityUuid = ?1 AND userUuid IN ?2", communityUuid, userUuids)
+            .list()
+        val userUuidsWithMissingRequests = userUuids.filter { userUuid -> !requests.map { it.userUuid }.contains(userUuid) }
+        if (userUuidsWithMissingRequests.isNotEmpty()) throw CustomBadRequestException("No requests found for users: $userUuidsWithMissingRequests")
+        return requests
     }
 }

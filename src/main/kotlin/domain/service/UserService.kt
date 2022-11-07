@@ -21,6 +21,11 @@ class UserService {
         return UserModel(user)
     }
 
+    fun getUsersByUuid(uuids: List<UUID>): List<UserModel> {
+        val users = User.find("uuid IN ?1", uuids).list()
+        return users.map { UserModel(it) }
+    }
+
     fun getUserByMail(mail: String): UserModel? {
         val user = User.find("mail", mail).firstResult() ?: return null
         return UserModel(user)
@@ -55,6 +60,14 @@ class UserService {
     fun getUsersByCommunityUuid(communityUuid: UUID, pageConfig: PageConfig): PageModel<UserModel> {
         val query = User
             .find(query = "#User.getByCommunityUuid",
+                Parameters.with("communityUuid", communityUuid))
+            .page(Page.of(pageConfig.pageNumber, pageConfig.pageSize))
+        return PageModel.of(query, ::UserModel)
+    }
+
+    fun getUsersWithRequestByCommunityUuid(communityUuid: UUID, pageConfig: PageConfig): PageModel<UserModel> {
+        val query = User
+            .find(query = "#User.getWithRequestByCommunityUuid",
                 Parameters.with("communityUuid", communityUuid))
             .page(Page.of(pageConfig.pageNumber, pageConfig.pageSize))
         return PageModel.of(query, ::UserModel)

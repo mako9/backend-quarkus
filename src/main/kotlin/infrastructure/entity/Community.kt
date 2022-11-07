@@ -3,6 +3,7 @@ package infrastructure.entity
 import io.quarkus.hibernate.orm.panache.kotlin.PanacheCompanion
 import io.quarkus.hibernate.orm.panache.kotlin.PanacheEntityBase
 import org.hibernate.annotations.Type
+import java.time.OffsetDateTime
 import java.util.*
 import javax.persistence.*
 
@@ -48,6 +49,12 @@ class Community : PanacheEntityBase {
     @Column(name = "can_be_joined")
     var canBeJoined: Boolean = false
 
+    @Column(name = "created_at")
+    lateinit var createdAt: OffsetDateTime
+
+    @Column(name = "updated_at")
+    lateinit var updatedAt: OffsetDateTime
+
     constructor(
         uuid: UUID,
         name: String,
@@ -72,6 +79,8 @@ class Community : PanacheEntityBase {
         this.latitude = latitude
         this.longitude = longitude
         this.canBeJoined = canBeJoined
+        this.createdAt = OffsetDateTime.now()
+        this.updatedAt = OffsetDateTime.now()
     }
 
     constructor()

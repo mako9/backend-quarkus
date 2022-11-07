@@ -321,6 +321,114 @@ class CommunityControllerTest {
             .statusCode(400)
     }
 
+    @Test
+    fun `when leaving specific community successfully, then status 204 is returned`() {
+        val community = entityUtil.setupCommunity()
+        entityUtil.setupUserCommunityRelation { it.communityUuid = community.uuid; it.userUuid = user.uuid }
+
+        RestAssured.given().auth().oauth2(accessToken)
+            .contentType(ContentType.JSON)
+            .`when`()["/api/user/community/${community.uuid}/leave"]
+            .then()
+            .statusCode(204)
+    }
+
+    @Test
+    fun `when leaving non-existing community, then status 404 is returned`() {
+        RestAssured.given().auth().oauth2(accessToken)
+            .contentType(ContentType.JSON)
+            .`when`()["/api/user/community/${UUID.randomUUID()}/leave"]
+            .then()
+            .statusCode(404)
+    }
+
+    @Test
+    fun `when approving request successfully, then status 200 and list of approved members is returned`() {
+        val community = entityUtil.setupCommunity { it.adminUuid = user.uuid }
+        val userOne = entityUtil.setupUser()
+        entityUtil.setupUserCommunityJoinRequest { it.communityUuid = community.uuid; it.userUuid = userOne.uuid }
+
+        val jsonPath = RestAssured.given().auth().oauth2(accessToken)
+            .contentType(ContentType.JSON)
+            .body(listOf(userOne.uuid))
+            .post("/api/user/community/${community.uuid}/request/approve")
+            .then()
+            .statusCode(200)
+            .extract()
+            .response()
+            .jsonPath()
+
+        assertEquals(
+            listOf(
+                MinimalUserDto(UserModel(userOne))
+            ),
+            jsonPath.getList("", MinimalUserDto::class.java))
+    }
+
+    @Test
+    fun `when approving request without admin, then status 403 is returned`() {
+        val community = entityUtil.setupCommunity()
+        entityUtil.setupUserCommunityJoinRequest { it.communityUuid = community.uuid; it.userUuid = user.uuid }
+
+        RestAssured.given().auth().oauth2(accessToken)
+            .contentType(ContentType.JSON)
+            .body(listOf(user.uuid))
+            .post("/api/user/community/${community.uuid}/request/approve")
+            .then()
+            .statusCode(403)
+    }
+
+    @Test
+    fun `when approving non-existing request, then status 400 is returned`() {
+        val community = entityUtil.setupCommunity { it.adminUuid = user.uuid }
+
+        RestAssured.given().auth().oauth2(accessToken)
+            .contentType(ContentType.JSON)
+            .body(listOf(user.uuid))
+            .post("/api/user/community/${community.uuid}/request/approve")
+            .then()
+            .statusCode(400)
+    }
+
+    @Test
+    fun `when declining request successfully, then status 204 is returned`() {
+        val community = entityUtil.setupCommunity { it.adminUuid = user.uuid }
+        val userOne = entityUtil.setupUser()
+        entityUtil.setupUserCommunityJoinRequest { it.communityUuid = community.uuid; it.userUuid = userOne.uuid }
+
+        val jsonPath = RestAssured.given().auth().oauth2(accessToken)
+            .contentType(ContentType.JSON)
+            .body(listOf(userOne.uuid))
+            .post("/api/user/community/${community.uuid}/request/decline")
+            .then()
+            .statusCode(204)
+    }
+
+    @Test
+    fun `when declining request without admin, then status 403 is returned`() {
+        val community = entityUtil.setupCommunity()
+        entityUtil.setupUserCommunityJoinRequest { it.communityUuid = community.uuid; it.userUuid = user.uuid }
+
+        RestAssured.given().auth().oauth2(accessToken)
+            .contentType(ContentType.JSON)
+            .body(listOf(user.uuid))
+            .post("/api/user/community/${community.uuid}/request/decline")
+            .then()
+            .statusCode(403)
+    }
+
+    @Test
+    fun `when declining non-existing request, then status 400 is returned`() {
+        val community = entityUtil.setupCommunity { it.adminUuid = user.uuid }
+
+        RestAssured.given().auth().oauth2(accessToken)
+            .contentType(ContentType.JSON)
+            .body(listOf(user.uuid))
+            .post("/api/user/community/${community.uuid}/request/decline")
+            .then()
+            .statusCode(400)
+    }
+
 
     companion object {
         init {
