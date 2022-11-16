@@ -14,8 +14,7 @@ import io.quarkus.test.keycloak.client.KeycloakTestClient
 import io.restassured.RestAssured
 import io.restassured.http.ContentType
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import testUtils.EntityUtil
@@ -167,6 +166,9 @@ class CommunityControllerTest {
         assertEquals(community.adminUuid.toString(), jsonPath.getString("adminUuid"))
         assertEquals(user.firstName, jsonPath.getString("adminFirstName"))
         assertEquals(user.lastName, jsonPath.getString("adminLastName"))
+        assertEquals(community.canBeJoined, jsonPath.getBoolean("canBeJoined"))
+        assertTrue(jsonPath.getBoolean("admin"))
+        assertFalse(jsonPath.getBoolean("hasRequestedMembership"))
     }
 
     @Test
@@ -289,6 +291,146 @@ class CommunityControllerTest {
             jsonPath.getList("content", MinimalUserDto::class.java))
     }
 
+    @Test
+    fun `when joining specific community successfully, then status 204 is returned`() {
+        val community = entityUtil.setupCommunity()
+
+        RestAssured.given().auth().oauth2(accessToken)
+            .contentType(ContentType.JSON)
+            .`when`()["/api/user/community/${community.uuid}/join"]
+            .then()
+            .statusCode(204)
+    }
+
+    @Test
+    fun `when joining non-existing community, then status 404 is returned`() {
+        RestAssured.given().auth().oauth2(accessToken)
+            .contentType(ContentType.JSON)
+            .`when`()["/api/user/community/${UUID.randomUUID()}/join"]
+            .then()
+            .statusCode(404)
+    }
+
+    @Test
+    fun `when joining non-joinable community, then status 400 is returned`() {
+        val community = entityUtil.setupCommunity { it.canBeJoined = false }
+
+        RestAssured.given().auth().oauth2(accessToken)
+            .contentType(ContentType.JSON)
+            .`when`()["/api/user/community/${community.uuid}/join"]
+            .then()
+            .statusCode(400)
+    }
+
+    @Test
+    fun `when leaving specific community successfully, then status 204 is returned`() {
+        val community = entityUtil.setupCommunity()
+        entityUtil.setupUserCommunityRelation { it.communityUuid = community.uuid; it.userUuid = user.uuid }
+
+        RestAssured.given().auth().oauth2(accessToken)
+            .contentType(ContentType.JSON)
+            .`when`()["/api/user/community/${community.uuid}/leave"]
+            .then()
+            .statusCode(204)
+    }
+
+    @Test
+    fun `when leaving non-existing community, then status 404 is returned`() {
+        RestAssured.given().auth().oauth2(accessToken)
+            .contentType(ContentType.JSON)
+            .`when`()["/api/user/community/${UUID.randomUUID()}/leave"]
+            .then()
+            .statusCode(404)
+    }
+
+    @Test
+    fun `when approving request successfully, then status 200 and list of approved members is returned`() {
+        val community = entityUtil.setupCommunity { it.adminUuid = user.uuid }
+        val userOne = entityUtil.setupUser()
+        entityUtil.setupUserCommunityJoinRequest { it.communityUuid = community.uuid; it.userUuid = userOne.uuid }
+
+        val jsonPath = RestAssured.given().auth().oauth2(accessToken)
+            .contentType(ContentType.JSON)
+            .body(listOf(userOne.uuid))
+            .post("/api/user/community/${community.uuid}/request/approve")
+            .then()
+            .statusCode(200)
+            .extract()
+            .response()
+            .jsonPath()
+
+        assertEquals(
+            listOf(
+                MinimalUserDto(UserModel(userOne))
+            ),
+            jsonPath.getList("", MinimalUserDto::class.java))
+    }
+
+    @Test
+    fun `when approving request without admin, then status 403 is returned`() {
+        val community = entityUtil.setupCommunity()
+        entityUtil.setupUserCommunityJoinRequest { it.communityUuid = community.uuid; it.userUuid = user.uuid }
+
+        RestAssured.given().auth().oauth2(accessToken)
+            .contentType(ContentType.JSON)
+            .body(listOf(user.uuid))
+            .post("/api/user/community/${community.uuid}/request/approve")
+            .then()
+            .statusCode(403)
+    }
+
+    @Test
+    fun `when approving non-existing request, then status 400 is returned`() {
+        val community = entityUtil.setupCommunity { it.adminUuid = user.uuid }
+
+        RestAssured.given().auth().oauth2(accessToken)
+            .contentType(ContentType.JSON)
+            .body(listOf(user.uuid))
+            .post("/api/user/community/${community.uuid}/request/approve")
+            .then()
+            .statusCode(400)
+    }
+
+    @Test
+    fun `when declining request successfully, then status 204 is returned`() {
+        val community = entityUtil.setupCommunity { it.adminUuid = user.uuid }
+        val userOne = entityUtil.setupUser()
+        entityUtil.setupUserCommunityJoinRequest { it.communityUuid = community.uuid; it.userUuid = userOne.uuid }
+
+        RestAssured.given().auth().oauth2(accessToken)
+            .contentType(ContentType.JSON)
+            .body(listOf(userOne.uuid))
+            .post("/api/user/community/${community.uuid}/request/decline")
+            .then()
+            .statusCode(204)
+    }
+
+    @Test
+    fun `when declining request without admin, then status 403 is returned`() {
+        val community = entityUtil.setupCommunity()
+        entityUtil.setupUserCommunityJoinRequest { it.communityUuid = community.uuid; it.userUuid = user.uuid }
+
+        RestAssured.given().auth().oauth2(accessToken)
+            .contentType(ContentType.JSON)
+            .body(listOf(user.uuid))
+            .post("/api/user/community/${community.uuid}/request/decline")
+            .then()
+            .statusCode(403)
+    }
+
+    @Test
+    fun `when declining non-existing request, then status 400 is returned`() {
+        val community = entityUtil.setupCommunity { it.adminUuid = user.uuid }
+
+        RestAssured.given().auth().oauth2(accessToken)
+            .contentType(ContentType.JSON)
+            .body(listOf(user.uuid))
+            .post("/api/user/community/${community.uuid}/request/decline")
+            .then()
+            .statusCode(400)
+    }
+
+
     companion object {
         init {
             RestAssured.useRelaxedHTTPSValidation()
@@ -304,7 +446,8 @@ class CommunityControllerTest {
             null,
             11,
             20.0,
-            30.0
+            30.0,
+            true
         )
     }
 }

@@ -13,7 +13,8 @@ data class CommunityModel (
     var adminUuid: UUID,
     var radius: Int,
     var latitude: Double,
-    var longitude: Double
+    var longitude: Double,
+    var canBeJoined: Boolean
 ) {
     constructor(community: Community): this(
         community.uuid,
@@ -25,6 +26,7 @@ data class CommunityModel (
         community.adminUuid,
         community.radius,
         community.latitude,
-        community.longitude
+        community.longitude,
+        community.canBeJoined
     )
 }

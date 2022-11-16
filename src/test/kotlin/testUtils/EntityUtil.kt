@@ -3,6 +3,7 @@ package testUtils
 import common.UserRole
 import infrastructure.entity.Community
 import infrastructure.entity.User
+import infrastructure.entity.UserCommunityJoinRequest
 import infrastructure.entity.UserCommunityRelation
 import java.util.*
 import javax.enterprise.context.ApplicationScoped
@@ -14,6 +15,7 @@ class EntityUtil {
 
     fun deleteAllData() {
         UserCommunityRelation.deleteAll()
+        UserCommunityJoinRequest.deleteAll()
         Community.deleteAll()
         User.deleteAll()
     }
@@ -48,7 +50,8 @@ class EntityUtil {
             UUID.randomUUID(),
             10,
             20.0,
-            -30.0
+            -30.0,
+            true
         )
         intercept(community)
         if (User.find("uuid", community.adminUuid).firstResult() == null) {
@@ -69,5 +72,15 @@ class EntityUtil {
         intercept(userCommunityRelation)
         userCommunityRelation.persist()
         return userCommunityRelation
+    }
+
+    fun setupUserCommunityJoinRequest(intercept: (UserCommunityJoinRequest) -> Unit = {}): UserCommunityJoinRequest {
+        val userCommunityJoinRequest = UserCommunityJoinRequest(
+            UUID.randomUUID(),
+            UUID.randomUUID()
+        )
+        intercept(userCommunityJoinRequest)
+        userCommunityJoinRequest.persist()
+        return userCommunityJoinRequest
     }
 }

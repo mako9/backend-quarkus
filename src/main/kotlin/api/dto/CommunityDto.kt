@@ -35,7 +35,10 @@ data class CommunityDetailDto(
     var longitude: Double,
     var adminUuid: UUID,
     var adminFirstName: String? = null,
-    var adminLastName: String? = null
+    var adminLastName: String? = null,
+    var canBeJoined: Boolean,
+    var isMember: Boolean = false,
+    var hasRequestedMembership: Boolean = false,
 ) {
 
     companion object {
@@ -56,7 +59,8 @@ data class CommunityDetailDto(
         radius = communityModel.radius,
         latitude = communityModel.latitude,
         longitude = communityModel.longitude,
-        adminUuid = communityModel.adminUuid
+        adminUuid = communityModel.adminUuid,
+        canBeJoined = communityModel.canBeJoined
     )
 }
 
@@ -72,5 +76,6 @@ data class CommunityRequestDto(
     @Range(min = -90, max = 90)
     var latitude: Double,
     @Range(min = -180, max = 180)
-    var longitude: Double
+    var longitude: Double,
+    var canBeJoined: Boolean
 )
