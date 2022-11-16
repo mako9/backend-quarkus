@@ -263,5 +263,22 @@ class CommunityServiceTest {
                 communityService.declineRequestsForUsers(community.uuid, listOf(user.uuid))
             }
         }
+
+        @Test
+        fun `when requesting join relation exists, then hasUserRequestedMembership returns true`() {
+            val user = entityUtil.setupUser()
+            val community = entityUtil.setupCommunity()
+            entityUtil.setupUserCommunityJoinRequest { it.communityUuid = community.uuid; it.userUuid = user.uuid }
+
+            assertTrue(communityService.hasUserRequestedMembership(community.uuid, user.uuid))
+        }
+
+        @Test
+        fun `when requesting join relation does not exist, then hasUserRequestedMembership returns true`() {
+            val user = entityUtil.setupUser()
+            val community = entityUtil.setupCommunity()
+
+            assertFalse(communityService.hasUserRequestedMembership(community.uuid, user.uuid))
+        }
     }
 }

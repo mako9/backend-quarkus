@@ -118,8 +118,12 @@ class CommunityService {
             .delete("communityUuid = ?1 AND userUuid IN ?2", communityUuid, userUuids)
     }
 
-    fun isUserCommunityMember(userUuid: UUID): Boolean {
-        return UserCommunityRelation.find("userUuid", userUuid).firstResult() != null
+    fun isUserCommunityMember(communityUuid: UUID, userUuid: UUID): Boolean {
+        return UserCommunityRelation.find("communityUuid = ?1 AND userUuid = ?2", communityUuid, userUuid).firstResult() != null
+    }
+
+    fun hasUserRequestedMembership(communityUuid: UUID, userUuid: UUID): Boolean {
+        return UserCommunityJoinRequest.find("communityUuid = ?1 AND userUuid = ?2", communityUuid, userUuid).firstResult() != null
     }
 
     private fun getRequests(communityUuid: UUID, userUuids: List<UUID>): List<UserCommunityJoinRequest>  {

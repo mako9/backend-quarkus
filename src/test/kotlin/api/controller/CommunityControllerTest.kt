@@ -14,8 +14,7 @@ import io.quarkus.test.keycloak.client.KeycloakTestClient
 import io.restassured.RestAssured
 import io.restassured.http.ContentType
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import testUtils.EntityUtil
@@ -168,6 +167,8 @@ class CommunityControllerTest {
         assertEquals(user.firstName, jsonPath.getString("adminFirstName"))
         assertEquals(user.lastName, jsonPath.getString("adminLastName"))
         assertEquals(community.canBeJoined, jsonPath.getBoolean("canBeJoined"))
+        assertTrue(jsonPath.getBoolean("admin"))
+        assertFalse(jsonPath.getBoolean("hasRequestedMembership"))
     }
 
     @Test
@@ -396,7 +397,7 @@ class CommunityControllerTest {
         val userOne = entityUtil.setupUser()
         entityUtil.setupUserCommunityJoinRequest { it.communityUuid = community.uuid; it.userUuid = userOne.uuid }
 
-        val jsonPath = RestAssured.given().auth().oauth2(accessToken)
+        RestAssured.given().auth().oauth2(accessToken)
             .contentType(ContentType.JSON)
             .body(listOf(userOne.uuid))
             .post("/api/user/community/${community.uuid}/request/decline")

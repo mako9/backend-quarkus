@@ -65,7 +65,8 @@ class CommunityController {
         val dto = CommunityDetailDto.createWithIsAdmin(communityModel, userUuid)
         dto.adminFirstName = admin?.firstName
         dto.adminLastName = admin?.lastName
-        dto.isMember = communityService.isUserCommunityMember(userUuid)
+        dto.isMember = communityService.isUserCommunityMember(uuid, userUuid)
+        dto.hasRequestedMembership = communityService.hasUserRequestedMembership(uuid, userUuid)
 
         return dto
     }
