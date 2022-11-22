@@ -1,10 +1,8 @@
 package testUtils
 
+import common.ItemCategory
 import common.UserRole
-import infrastructure.entity.Community
-import infrastructure.entity.User
-import infrastructure.entity.UserCommunityJoinRequest
-import infrastructure.entity.UserCommunityRelation
+import infrastructure.entity.*
 import java.util.*
 import javax.enterprise.context.ApplicationScoped
 import javax.transaction.Transactional
@@ -16,6 +14,7 @@ class EntityUtil {
     fun deleteAllData() {
         UserCommunityRelation.deleteAll()
         UserCommunityJoinRequest.deleteAll()
+        Item.deleteAll()
         Community.deleteAll()
         User.deleteAll()
     }
@@ -82,5 +81,35 @@ class EntityUtil {
         intercept(userCommunityJoinRequest)
         userCommunityJoinRequest.persist()
         return userCommunityJoinRequest
+    }
+
+    fun setupItem(intercept: (Item) -> Unit = {}): Item {
+        val uuid = UUID.randomUUID()
+        val item = Item(
+            uuid,
+            "name-$uuid",
+            listOf(ItemCategory.OTHER),
+            "street",
+            "1",
+            "36039",
+            "Fulda",
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            20.0,
+            -30.0,
+            true,
+            availability = null,
+            description = "description-$uuid"
+        )
+        intercept(item)
+        if (User.find("uuid", item.userUuid).firstResult() == null) {
+            setupUser { it.uuid = item.userUuid }
+        }
+        if (Community.find("uuid", item.communityUuid).firstResult() == null) {
+            setupCommunity { it.uuid = item.communityUuid }
+        }
+        item.persist()
+
+        return item
     }
 }

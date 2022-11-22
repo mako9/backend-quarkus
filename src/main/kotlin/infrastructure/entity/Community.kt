@@ -83,5 +83,5 @@ class Community : PanacheEntityBase {
         this.updatedAt = OffsetDateTime.now()
     }
 
-    constructor()
+    private constructor()
 }

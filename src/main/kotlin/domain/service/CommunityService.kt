@@ -38,19 +38,7 @@ class CommunityService {
     }
 
     fun insertCommunity(communityModel: CommunityModel): CommunityModel  {
-        val community = Community(
-            communityModel.uuid,
-            communityModel.name,
-            communityModel.street,
-            communityModel.houseNumber,
-            communityModel.postalCode,
-            communityModel.city,
-            communityModel.adminUuid,
-            communityModel.radius,
-            communityModel.latitude,
-            communityModel.longitude,
-            communityModel.canBeJoined
-        )
+        val community = communityModel.toCommunity()
         community.persist()
         UserCommunityRelation(
             community.adminUuid,

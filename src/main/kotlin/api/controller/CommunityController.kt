@@ -4,7 +4,9 @@ import api.dto.*
 import common.PageConfig
 import domain.model.CommunityModel
 import domain.model.sort.CommunitySortBy
+import domain.model.sort.ItemSortBy
 import domain.service.CommunityService
+import domain.service.ItemService
 import domain.service.UserService
 import io.quarkus.panache.common.Sort
 import org.apache.http.HttpStatus
@@ -23,6 +25,8 @@ import javax.ws.rs.core.Response
 class CommunityController {
     @Inject
     lateinit var communityService: CommunityService
+    @Inject
+    lateinit var itemService: ItemService
     @Inject
     lateinit var userService: UserService
     @Inject
@@ -206,6 +210,19 @@ class CommunityController {
         checkUserAdminRight(communityModel)
         communityService.declineRequestsForUsers(uuid, userUuids)
         return Response.noContent().build()
+    }
+
+    @GET
+    @Path("/{uuid}/item")
+    fun getItemsOfCommunity(
+        @RestPath uuid: UUID,
+        @QueryParam("pageNumber") @Min(0) pageNumber: Int?,
+        @QueryParam("pageSize") @Range(min = 1, max = 100) pageSize: Int?,
+        @QueryParam("sortBy") sortBy: ItemSortBy?,
+        @QueryParam("sortDirection") sortDirection: Sort.Direction?,
+    ): PageDto<ItemDto> {
+        val itemModelsPage = itemService.getItemsPageOfCommunity(uuid, PageConfig(pageNumber, pageSize), sortBy, sortDirection)
+        return PageDto.of(itemModelsPage, ::ItemDto)
     }
 
     private fun checkUserAdminRight(communityModel: CommunityModel) {
