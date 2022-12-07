@@ -77,8 +77,6 @@ CREATE TABLE "item" (
     city VARCHAR(100),
     community_uuid CHAR(36) NOT NULL,
     user_uuid CHAR(36) NOT NULL,
-    latitude DECIMAL,
-    longitude DECIMAL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     description TEXT,
@@ -88,4 +86,3 @@ CREATE TABLE "item" (
     CONSTRAINT "fc_item__user_uuid" FOREIGN KEY (user_uuid) REFERENCES "user"(uuid)
 );
 --rollback DROP TABLE item;
-

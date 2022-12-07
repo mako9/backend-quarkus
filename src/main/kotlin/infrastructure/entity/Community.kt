@@ -35,6 +35,7 @@ class Community : PanacheEntityBase {
     var city: String? = null
 
     @Column(name = "admin_uuid")
+    @Type(type = "uuid-char")
     lateinit var adminUuid: UUID
 
     @Column

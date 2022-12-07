@@ -40,12 +40,12 @@ class ItemControllerTest {
     }
 
     @Test
-    fun `when retrieving paginated items for requesting user with default pagination, then correct page is returned`() {
+    fun `when retrieving paginated items owned by requesting user with default pagination, then correct page is returned`() {
         val itemOne = entityUtil.setupItem { it.name = "one"; it.communityUuid = community.uuid; it.userUuid = user.uuid }
         val itemTwo = entityUtil.setupItem { it.name = "two"; it.communityUuid = community.uuid; it.userUuid = user.uuid }
         val jsonPath = RestAssured.given().auth().oauth2(accessToken)
             .contentType(ContentType.JSON)
-            .`when`()["/api/user/item/my"]
+            .`when`()["/api/user/item/owned"]
             .then()
             .statusCode(200)
             .extract()
@@ -79,6 +79,35 @@ class ItemControllerTest {
             .jsonPath()
 
         assertEquals(ItemDetailDto(ItemModel(item)), jsonPath.getObject("", ItemDetailDto::class.java))
+    }
+
+    @Test
+    fun `when retrieving paginated items for my communities, then correct page is returned`() {
+        val myCommunityOne = entityUtil.setupCommunity(user.uuid)
+        val myCommunityTwo = entityUtil.setupCommunity(user.uuid)
+        val itemOne = entityUtil.setupItem { it.name = "one"; it.communityUuid = myCommunityOne.uuid }
+        val itemTwo = entityUtil.setupItem { it.name = "two"; it.communityUuid = myCommunityTwo.uuid }
+        val jsonPath = RestAssured.given().auth().oauth2(accessToken)
+            .contentType(ContentType.JSON)
+            .`when`()["/api/user/item/my"]
+            .then()
+            .statusCode(200)
+            .extract()
+            .response()
+            .jsonPath()
+
+        assertEquals(true, jsonPath.getBoolean("firstPage"))
+        assertEquals(true, jsonPath.getBoolean("lastPage"))
+        assertEquals(0, jsonPath.getInt("pageNumber"))
+        assertEquals(50, jsonPath.getInt("pageSize"))
+        assertEquals(2, jsonPath.getInt("totalElements"))
+        assertEquals(1, jsonPath.getInt("totalPages"))
+        assertEquals(
+            listOf(
+                ItemDto(ItemModel(itemOne)),
+                ItemDto(ItemModel(itemTwo))
+            ),
+            jsonPath.getList("content", ItemDto::class.java))
     }
 
     @Test

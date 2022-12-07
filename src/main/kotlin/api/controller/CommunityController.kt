@@ -38,7 +38,7 @@ class CommunityController {
         @QueryParam("pageNumber") @Min(0) pageNumber: Int?,
         @QueryParam("pageSize") @Range(min = 1, max = 100) pageSize: Int?,
         @QueryParam("sortBy") sortBy: CommunitySortBy?,
-        @QueryParam("sortDirection") sortDirection: Sort.Direction?,
+        @QueryParam("sortDirection") sortDirection: Sort.Direction?
     ): PageDto<CommunityDto> {
         val communityModelsPage = communityService.getCommunitiesPage(PageConfig(pageNumber, pageSize), sortBy, sortDirection)
         return PageDto.of(communityModelsPage, ::CommunityDto)
@@ -48,11 +48,25 @@ class CommunityController {
     @Path("/my")
     fun getMyCommunities(
         @QueryParam("pageNumber") @Min(0) pageNumber: Int?,
-        @QueryParam("pageSize") @Range(min = 1, max = 100) pageSize: Int?,
+        @QueryParam("pageSize") @Range(min = 1, max = 100) pageSize: Int?
     ): PageDto<CommunityDto> {
         val userUuid = getUserUuid()
 
         val communityModelsPage = communityService.getCommunitiesPageByUser(PageConfig(pageNumber, pageSize), userUuid)
+        return PageDto.of(communityModelsPage, ::CommunityDto)
+    }
+
+    @GET
+    @Path("/owned")
+    fun getCommunitiesOwnedByMe(
+        @QueryParam("pageNumber") @Min(0) pageNumber: Int?,
+        @QueryParam("pageSize") @Range(min = 1, max = 100) pageSize: Int?,
+        @QueryParam("sortBy") sortBy: CommunitySortBy?,
+        @QueryParam("sortDirection") sortDirection: Sort.Direction?
+    ): PageDto<CommunityDto> {
+        val userUuid = getUserUuid()
+
+        val communityModelsPage = communityService.getCommunitiesPageByAdmin(userUuid, PageConfig(pageNumber, pageSize), sortBy, sortDirection)
         return PageDto.of(communityModelsPage, ::CommunityDto)
     }
 
@@ -221,7 +235,7 @@ class CommunityController {
         @QueryParam("sortBy") sortBy: ItemSortBy?,
         @QueryParam("sortDirection") sortDirection: Sort.Direction?,
     ): PageDto<ItemDto> {
-        val itemModelsPage = itemService.getItemsPageOfCommunity(uuid, PageConfig(pageNumber, pageSize), sortBy, sortDirection)
+        val itemModelsPage = itemService.getItemsPageOfCommunities(listOf(uuid), PageConfig(pageNumber, pageSize), sortBy, sortDirection)
         return PageDto.of(itemModelsPage, ::ItemDto)
     }
 

@@ -47,7 +47,7 @@ class ItemServiceTest {
     @Test
     fun `when retrieving paginated items for specific community, then correct page of community models is returned`() {
         val pageConfig = PageConfig()
-        val communityPage = itemService.getItemsPageOfCommunity(community.uuid, pageConfig, null, null)
+        val communityPage = itemService.getItemsPageOfCommunities(listOf(community.uuid), pageConfig, null, null)
         assertEquals(1, communityPage.totalPages)
         assertEquals(true, communityPage.isFirstPage)
         assertEquals(true, communityPage.isLastPage)
@@ -61,7 +61,7 @@ class ItemServiceTest {
     @Test
     fun `when retrieving paginated items for specific community with pagination and sorting, then correct page of community models is returned`() {
         val pageConfig = PageConfig(pageSize = 1, pageNumber = 1)
-        val communityPage = itemService.getItemsPageOfCommunity(community.uuid, pageConfig, ItemSortBy.NAME, Sort.Direction.Descending)
+        val communityPage = itemService.getItemsPageOfCommunities(listOf(community.uuid), pageConfig, ItemSortBy.NAME, Sort.Direction.Descending)
         assertEquals(2, communityPage.totalPages)
         assertEquals(false, communityPage.isFirstPage)
         assertEquals(true, communityPage.isLastPage)

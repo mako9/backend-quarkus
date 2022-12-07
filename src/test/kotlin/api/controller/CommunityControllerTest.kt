@@ -145,6 +145,27 @@ class CommunityControllerTest {
     }
 
     @Test
+    fun `when retrieving paginated communities owned by user, then correct page is returned`() {
+        val communityOne = entityUtil.setupCommunity { it.name = "one"; it.city = "one"; it.adminUuid = user.uuid }
+        entityUtil.setupCommunity(user.uuid) { it.name = "two"; it.city = "two" }
+
+        val jsonPath = RestAssured.given().auth().oauth2(accessToken)
+            .contentType(ContentType.JSON)
+            .`when`()["/api/user/community/owned"]
+            .then()
+            .statusCode(200)
+            .extract()
+            .response()
+            .jsonPath()
+
+        assertEquals(
+            listOf(
+                CommunityDto(CommunityModel(communityOne))
+            ),
+            jsonPath.getList("content", CommunityDto::class.java))
+    }
+
+    @Test
     fun `when retrieving specific community, then correct detailed community is returned`() {
         val community = entityUtil.setupCommunity { it.name = "one"; it.city = "one"; it.adminUuid = user.uuid }
 

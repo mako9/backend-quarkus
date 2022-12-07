@@ -32,8 +32,8 @@ class ItemController {
     lateinit var jwt: JsonWebToken
 
     @GET
-    @Path("/my")
-    fun getMyItems(
+    @Path("/owned")
+    fun getItemsOwnedByMe(
         @QueryParam("pageNumber") @Min(0) pageNumber: Int?,
         @QueryParam("pageSize") @Range(min = 1, max = 100) pageSize: Int?,
         @QueryParam("sortBy") sortBy: ItemSortBy?,
@@ -41,6 +41,21 @@ class ItemController {
     ): PageDto<ItemDto> {
         val userUuid = getUserUuid()
         val itemModelsPage = itemService.getItemsPageOfUser(userUuid, PageConfig(pageNumber, pageSize), sortBy, sortDirection)
+        return PageDto.of(itemModelsPage, ::ItemDto)
+    }
+
+    @GET
+    @Path("/my")
+    fun getItemsOfMyCommunities(
+        @QueryParam("pageNumber") @Min(0) pageNumber: Int?,
+        @QueryParam("pageSize") @Range(min = 1, max = 100) pageSize: Int?,
+        @QueryParam("sortBy") sortBy: ItemSortBy?,
+        @QueryParam("sortDirection") sortDirection: Sort.Direction?,
+    ): PageDto<ItemDto> {
+        val userUuid = getUserUuid()
+        val communityPage = communityService.getCommunitiesPageByUser(PageConfig(pageSize = 1000), userUuid)
+        val communityUuids = communityPage.content.map { it.uuid }
+        val itemModelsPage = itemService.getItemsPageOfCommunities(communityUuids, PageConfig(pageNumber, pageSize), sortBy, sortDirection)
         return PageDto.of(itemModelsPage, ::ItemDto)
     }
 
@@ -71,8 +86,6 @@ class ItemController {
             itemRequestDto.city,
             itemRequestDto.communityUuid,
             userUuid,
-            itemRequestDto.latitude,
-            itemRequestDto.longitude,
             itemRequestDto.isActive,
             availability = itemRequestDto.availability,
             description = itemRequestDto.description
@@ -100,8 +113,6 @@ class ItemController {
             itemRequestDto.city,
             itemRequestDto.communityUuid,
             userUuid,
-            itemRequestDto.latitude,
-            itemRequestDto.longitude,
             itemRequestDto.isActive,
             availability = itemRequestDto.availability,
             description = itemRequestDto.description

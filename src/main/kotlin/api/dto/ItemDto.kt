@@ -7,12 +7,16 @@ import java.util.*
 data class ItemDto(
     val uuid: UUID,
     val name: String,
-    var categories: List<ItemCategory>
+    var categories: List<ItemCategory>,
+    var communityUuid: UUID,
+    var communityName: String
 ) {
     constructor(itemModel: ItemModel): this(
         uuid = itemModel.uuid,
         name = itemModel.name,
-        categories = itemModel.categories
+        categories = itemModel.categories,
+        communityUuid = itemModel.communityUuid,
+        communityName = "Unknown"
     )
 }
 
@@ -25,11 +29,11 @@ data class ItemDetailDto(
     val postalCode: String?,
     val city: String?,
     var isActive: Boolean = false,
-    var latitude: Double?,
-    var longitude: Double?,
     var communityUuid: UUID,
     var userUuid: UUID,
-    var description: String?
+    var description: String?,
+    var isOwner: Boolean = false,
+    var communityName: String
 ) {
 
     constructor(itemModel: ItemModel): this(
@@ -41,11 +45,10 @@ data class ItemDetailDto(
         postalCode = itemModel.postalCode,
         city = itemModel.city,
         isActive = itemModel.isActive,
-        latitude = itemModel.latitude,
-        longitude = itemModel.longitude,
         communityUuid = itemModel.communityUuid,
         userUuid = itemModel.userUuid,
-        description = itemModel.description
+        description = itemModel.description,
+        communityName = "Unknown"
     )
 }
 
@@ -57,8 +60,6 @@ data class ItemRequestDto(
     val postalCode: String? = null,
     val city: String? = null,
     var isActive: Boolean = false,
-    var latitude: Double? = null,
-    var longitude: Double? = null,
     var communityUuid: UUID,
     var availability: String? = null,
     var description: String? = null

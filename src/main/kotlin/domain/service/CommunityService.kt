@@ -37,6 +37,15 @@ class CommunityService {
         return PageModel.of(query, ::CommunityModel)
     }
 
+    fun getCommunitiesPageByAdmin(adminUuid: UUID, pageConfig: PageConfig, sortBy: CommunitySortBy?, sortDirection: Sort.Direction?): PageModel<CommunityModel> {
+        val sortByValue = sortBy?.name ?: CommunitySortBy.NAME.name
+        val sortDirectionValue = sortDirection ?: Sort.Direction.Ascending
+        val query = Community
+            .find(query = "adminUuid", Sort.by(sortByValue, sortDirectionValue), adminUuid)
+            .page(Page.of(pageConfig.pageNumber, pageConfig.pageSize))
+        return PageModel.of(query, ::CommunityModel)
+    }
+
     fun insertCommunity(communityModel: CommunityModel): CommunityModel  {
         val community = communityModel.toCommunity()
         community.persist()

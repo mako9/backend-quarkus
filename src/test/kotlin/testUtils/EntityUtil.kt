@@ -95,8 +95,6 @@ class EntityUtil {
             "Fulda",
             UUID.randomUUID(),
             UUID.randomUUID(),
-            20.0,
-            -30.0,
             true,
             availability = null,
             description = "description-$uuid"

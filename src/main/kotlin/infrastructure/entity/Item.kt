@@ -58,12 +58,6 @@ class Item : PanacheEntityBase {
     @Type(type = "uuid-char")
     lateinit var userUuid: UUID
 
-    @Column
-    var latitude: Double? = null
-
-    @Column
-    var longitude: Double? = null
-
     @Column(name = "is_active")
     var isActive: Boolean = true
 
@@ -89,8 +83,6 @@ class Item : PanacheEntityBase {
         city: String?,
         communityUuid: UUID,
         userUuid: UUID,
-        latitude: Double?,
-        longitude: Double?,
         isActive: Boolean,
         createdAt: OffsetDateTime = OffsetDateTime.now(),
         updatedAt: OffsetDateTime = OffsetDateTime.now(),
@@ -106,8 +98,6 @@ class Item : PanacheEntityBase {
         this.city = city
         this.communityUuid = communityUuid
         this.userUuid = userUuid
-        this.latitude = latitude
-        this.longitude = longitude
         this.isActive = isActive
         this.createdAt = createdAt
         this.updatedAt = updatedAt
