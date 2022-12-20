@@ -30,13 +30,17 @@ class ItemServiceTest {
     private lateinit var community: Community
     private lateinit var itemOne: Item
     private lateinit var itemTwo: Item
+    private lateinit var itemThree: Item
+    private lateinit var itemFour: Item
 
     @BeforeEach
     fun beforeEach() {
         user = entityUtil.setupUser()
         community = entityUtil.setupCommunity()
-        itemOne = entityUtil.setupItem { it.name = "one"; it.communityUuid = community.uuid; it.userUuid = user.uuid; it.city = "aaa" }
-        itemTwo = entityUtil.setupItem { it.name = "two"; it.communityUuid = community.uuid; it.userUuid = user.uuid; it.city = "bbb" }
+        itemOne = entityUtil.setupItem { it.name = "aaa"; it.communityUuid = community.uuid; it.userUuid = user.uuid; it.city = "aaa" }
+        itemTwo = entityUtil.setupItem { it.name = "bbb"; it.communityUuid = community.uuid; it.userUuid = user.uuid; it.city = "bbb" }
+        itemThree = entityUtil.setupItem { it.name = "ccc"; it.communityUuid = community.uuid; it.city = "aaa" }
+        itemFour = entityUtil.setupItem { it.name = "ddd"; it.communityUuid = community.uuid; it.city = "bbb" }
     }
 
     @AfterEach
@@ -47,28 +51,28 @@ class ItemServiceTest {
     @Test
     fun `when retrieving paginated items for specific community, then correct page of community models is returned`() {
         val pageConfig = PageConfig()
-        val communityPage = itemService.getItemsPageOfCommunities(listOf(community.uuid), pageConfig, null, null)
+        val communityPage = itemService.getItemsPageOfCommunities(listOf(community.uuid), user.uuid, pageConfig, null, null)
         assertEquals(1, communityPage.totalPages)
         assertEquals(true, communityPage.isFirstPage)
         assertEquals(true, communityPage.isLastPage)
         assertEquals(pageConfig.pageSize, communityPage.pageSize)
         assertEquals(pageConfig.pageNumber, communityPage.pageNumber)
         assertEquals(2, communityPage.content.size)
-        assertEquals(ItemModel(itemOne), communityPage.content.first())
-        assertEquals(ItemModel(itemTwo), communityPage.content.last())
+        assertEquals(ItemModel(itemThree), communityPage.content.first())
+        assertEquals(ItemModel(itemFour), communityPage.content.last())
     }
 
     @Test
     fun `when retrieving paginated items for specific community with pagination and sorting, then correct page of community models is returned`() {
         val pageConfig = PageConfig(pageSize = 1, pageNumber = 1)
-        val communityPage = itemService.getItemsPageOfCommunities(listOf(community.uuid), pageConfig, ItemSortBy.NAME, Sort.Direction.Descending)
+        val communityPage = itemService.getItemsPageOfCommunities(listOf(community.uuid), user.uuid, pageConfig, ItemSortBy.NAME, Sort.Direction.Descending)
         assertEquals(2, communityPage.totalPages)
         assertEquals(false, communityPage.isFirstPage)
         assertEquals(true, communityPage.isLastPage)
         assertEquals(pageConfig.pageSize, communityPage.pageSize)
         assertEquals(pageConfig.pageNumber, communityPage.pageNumber)
         assertEquals(1, communityPage.content.size)
-        assertEquals(ItemModel(itemOne), communityPage.content.first())
+        assertEquals(ItemModel(itemThree), communityPage.content.first())
     }
 
     @Test

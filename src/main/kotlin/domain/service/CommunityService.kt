@@ -9,7 +9,6 @@ import infrastructure.entity.Community
 import infrastructure.entity.UserCommunityJoinRequest
 import infrastructure.entity.UserCommunityRelation
 import io.quarkus.panache.common.Page
-import io.quarkus.panache.common.Parameters
 import io.quarkus.panache.common.Sort
 import java.util.*
 import javax.enterprise.context.ApplicationScoped
@@ -20,19 +19,20 @@ import javax.transaction.Transactional
 @Transactional
 class CommunityService {
 
-    fun getCommunitiesPage(pageConfig: PageConfig, sortBy: CommunitySortBy?, sortDirection: Sort.Direction?): PageModel<CommunityModel> {
+    fun getCommunitiesPage(userUuid: UUID, pageConfig: PageConfig, sortBy: CommunitySortBy?, sortDirection: Sort.Direction?): PageModel<CommunityModel> {
         val sortByValue = sortBy?.name ?: CommunitySortBy.NAME.name
         val sortDirectionValue = sortDirection ?: Sort.Direction.Ascending
         val query = Community
-            .findAll(Sort.by(sortByValue, sortDirectionValue))
+            .find(query = Community.queryAllByNotUserUuid, sort = Sort.by(sortByValue, sortDirectionValue), userUuid)
             .page(Page.of(pageConfig.pageNumber, pageConfig.pageSize))
         return PageModel.of(query, ::CommunityModel)
     }
 
-    fun getCommunitiesPageByUser(pageConfig: PageConfig, userUuid: UUID): PageModel<CommunityModel> {
+    fun getCommunitiesPageByUser(userUuid: UUID, pageConfig: PageConfig, sortBy: CommunitySortBy?, sortDirection: Sort.Direction?): PageModel<CommunityModel> {
+        val sortByValue = sortBy?.name ?: CommunitySortBy.NAME.name
+        val sortDirectionValue = sortDirection ?: Sort.Direction.Ascending
         val query = Community
-            .find(query = "#Community.getByUserUuid",
-                Parameters.with("userUuid", userUuid))
+            .find(query = Community.queryAllByUserUuid, sort = Sort.by(sortByValue, sortDirectionValue), userUuid)
             .page(Page.of(pageConfig.pageNumber, pageConfig.pageSize))
         return PageModel.of(query, ::CommunityModel)
     }

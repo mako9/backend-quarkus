@@ -18,11 +18,11 @@ import javax.transaction.Transactional
 @Transactional
 class ItemService {
 
-    fun getItemsPageOfCommunities(communityUuids: List<UUID>, pageConfig: PageConfig, sortBy: ItemSortBy?, sortDirection: Sort.Direction?): PageModel<ItemModel> {
+    fun getItemsPageOfCommunities(communityUuids: List<UUID>, userUuid: UUID, pageConfig: PageConfig, sortBy: ItemSortBy?, sortDirection: Sort.Direction?): PageModel<ItemModel> {
         val sortByValue = sortBy?.name ?: ItemSortBy.NAME.name
         val sortDirectionValue = sortDirection ?: Sort.Direction.Ascending
         val query = Item
-            .find("communityUuid IN ?1", sort = Sort.by(sortByValue, sortDirectionValue), communityUuids)
+            .find("communityUuid IN ?1 AND userUuid <> ?2", sort = Sort.by(sortByValue, sortDirectionValue), communityUuids, userUuid)
             .page(Page.of(pageConfig.pageNumber, pageConfig.pageSize))
         return PageModel.of(query, ::ItemModel)
     }

@@ -53,9 +53,9 @@ class ItemController {
         @QueryParam("sortDirection") sortDirection: Sort.Direction?,
     ): PageDto<ItemDto> {
         val userUuid = getUserUuid()
-        val communityPage = communityService.getCommunitiesPageByUser(PageConfig(pageSize = 1000), userUuid)
+        val communityPage = communityService.getCommunitiesPageByUser(userUuid, PageConfig(pageSize = 1000), null, null)
         val communityUuids = communityPage.content.map { it.uuid }
-        val itemModelsPage = itemService.getItemsPageOfCommunities(communityUuids, PageConfig(pageNumber, pageSize), sortBy, sortDirection)
+        val itemModelsPage = itemService.getItemsPageOfCommunities(communityUuids, userUuid, PageConfig(pageNumber, pageSize), sortBy, sortDirection)
         return PageDto.of(itemModelsPage, ::ItemDto)
     }
 

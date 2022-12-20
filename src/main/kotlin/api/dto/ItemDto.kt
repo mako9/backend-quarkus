@@ -31,6 +31,7 @@ data class ItemDetailDto(
     var isActive: Boolean = false,
     var communityUuid: UUID,
     var userUuid: UUID,
+    var availability: String?,
     var description: String?,
     var isOwner: Boolean = false,
     var communityName: String
@@ -47,6 +48,7 @@ data class ItemDetailDto(
         isActive = itemModel.isActive,
         communityUuid = itemModel.communityUuid,
         userUuid = itemModel.userUuid,
+        availability = itemModel.availability,
         description = itemModel.description,
         communityName = "Unknown"
     )
