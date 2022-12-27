@@ -4,7 +4,9 @@ import api.dto.*
 import common.PageConfig
 import domain.model.CommunityModel
 import domain.model.sort.CommunitySortBy
+import domain.model.sort.ItemSortBy
 import domain.service.CommunityService
+import domain.service.ItemService
 import domain.service.UserService
 import io.quarkus.panache.common.Sort
 import org.apache.http.HttpStatus
@@ -24,6 +26,8 @@ class CommunityController {
     @Inject
     lateinit var communityService: CommunityService
     @Inject
+    lateinit var itemService: ItemService
+    @Inject
     lateinit var userService: UserService
     @Inject
     lateinit var jwt: JsonWebToken
@@ -34,9 +38,10 @@ class CommunityController {
         @QueryParam("pageNumber") @Min(0) pageNumber: Int?,
         @QueryParam("pageSize") @Range(min = 1, max = 100) pageSize: Int?,
         @QueryParam("sortBy") sortBy: CommunitySortBy?,
-        @QueryParam("sortDirection") sortDirection: Sort.Direction?,
+        @QueryParam("sortDirection") sortDirection: Sort.Direction?
     ): PageDto<CommunityDto> {
-        val communityModelsPage = communityService.getCommunitiesPage(PageConfig(pageNumber, pageSize), sortBy, sortDirection)
+        val userUuid = getUserUuid()
+        val communityModelsPage = communityService.getCommunitiesPage(userUuid, PageConfig(pageNumber, pageSize), sortBy, sortDirection)
         return PageDto.of(communityModelsPage, ::CommunityDto)
     }
 
@@ -45,10 +50,25 @@ class CommunityController {
     fun getMyCommunities(
         @QueryParam("pageNumber") @Min(0) pageNumber: Int?,
         @QueryParam("pageSize") @Range(min = 1, max = 100) pageSize: Int?,
+        @QueryParam("sortBy") sortBy: CommunitySortBy?,
+        @QueryParam("sortDirection") sortDirection: Sort.Direction?
+    ): PageDto<CommunityDto> {
+        val userUuid = getUserUuid()
+        val communityModelsPage = communityService.getCommunitiesPageByUser(userUuid, PageConfig(pageNumber, pageSize), sortBy, sortDirection)
+        return PageDto.of(communityModelsPage, ::CommunityDto)
+    }
+
+    @GET
+    @Path("/owned")
+    fun getCommunitiesOwnedByMe(
+        @QueryParam("pageNumber") @Min(0) pageNumber: Int?,
+        @QueryParam("pageSize") @Range(min = 1, max = 100) pageSize: Int?,
+        @QueryParam("sortBy") sortBy: CommunitySortBy?,
+        @QueryParam("sortDirection") sortDirection: Sort.Direction?
     ): PageDto<CommunityDto> {
         val userUuid = getUserUuid()
 
-        val communityModelsPage = communityService.getCommunitiesPageByUser(PageConfig(pageNumber, pageSize), userUuid)
+        val communityModelsPage = communityService.getCommunitiesPageByAdmin(userUuid, PageConfig(pageNumber, pageSize), sortBy, sortDirection)
         return PageDto.of(communityModelsPage, ::CommunityDto)
     }
 
@@ -206,6 +226,20 @@ class CommunityController {
         checkUserAdminRight(communityModel)
         communityService.declineRequestsForUsers(uuid, userUuids)
         return Response.noContent().build()
+    }
+
+    @GET
+    @Path("/{uuid}/item")
+    fun getItemsOfCommunity(
+        @RestPath uuid: UUID,
+        @QueryParam("pageNumber") @Min(0) pageNumber: Int?,
+        @QueryParam("pageSize") @Range(min = 1, max = 100) pageSize: Int?,
+        @QueryParam("sortBy") sortBy: ItemSortBy?,
+        @QueryParam("sortDirection") sortDirection: Sort.Direction?,
+    ): PageDto<ItemDto> {
+        val userUuid = getUserUuid()
+        val itemModelsPage = itemService.getItemsPageOfCommunities(listOf(uuid), userUuid, PageConfig(pageNumber, pageSize), sortBy, sortDirection)
+        return PageDto.of(itemModelsPage, ::ItemDto)
     }
 
     private fun checkUserAdminRight(communityModel: CommunityModel) {

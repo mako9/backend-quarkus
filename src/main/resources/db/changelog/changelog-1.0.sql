@@ -60,5 +60,30 @@ CREATE TABLE "user_community_join_request" (
     CONSTRAINT "fc_user_community_join_request__user_uuid" FOREIGN KEY (user_uuid) REFERENCES "user"(uuid),
     CONSTRAINT "fc_user_community_join_request__community_uuid" FOREIGN KEY (community_uuid) REFERENCES "community"(uuid)
 );
---rollback DROP TABLE user_community_relation;
+--rollback DROP TABLE user_community_join_request;
 
+--changeset mario:3 labels:item-table context:create-item-table
+--comment: Add item table
+DROP TYPE IF EXISTS item_category;
+CREATE TYPE item_category AS ENUM ('HOUSEKEEPING', 'GARDENING', 'TOOL', 'ELECTRIC_DEVICE', 'OTHER');
+
+CREATE TABLE "item" (
+    uuid CHAR(36) PRIMARY KEY NOT NULL,
+    "name" VARCHAR(100) NOT NULL,
+    categories item_category ARRAY NOT NULL,
+    street VARCHAR(255),
+    house_number VARCHAR(10),
+    postal_code VARCHAR(5),
+    city VARCHAR(100),
+    community_uuid CHAR(36) NOT NULL,
+    user_uuid CHAR(36) NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    description TEXT,
+    availability_json TEXT,
+    available_until TIMESTAMPTZ,
+    is_active BOOLEAN DEFAULT TRUE,
+    CONSTRAINT "fc_item__community_uuid" FOREIGN KEY (community_uuid) REFERENCES community(uuid),
+    CONSTRAINT "fc_item__user_uuid" FOREIGN KEY (user_uuid) REFERENCES "user"(uuid)
+);
+--rollback DROP TABLE item;

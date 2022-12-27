@@ -2,9 +2,11 @@ package api.controller
 
 import api.dto.CommunityDto
 import api.dto.CommunityRequestDto
+import api.dto.ItemDto
 import api.dto.MinimalUserDto
 import common.PageConfig
 import domain.model.CommunityModel
+import domain.model.ItemModel
 import domain.model.UserModel
 import domain.model.sort.CommunitySortBy
 import infrastructure.entity.User
@@ -129,6 +131,27 @@ class CommunityControllerTest {
         val jsonPath = RestAssured.given().auth().oauth2(accessToken)
             .contentType(ContentType.JSON)
             .`when`()["/api/user/community/my"]
+            .then()
+            .statusCode(200)
+            .extract()
+            .response()
+            .jsonPath()
+
+        assertEquals(
+            listOf(
+                CommunityDto(CommunityModel(communityOne))
+            ),
+            jsonPath.getList("content", CommunityDto::class.java))
+    }
+
+    @Test
+    fun `when retrieving paginated communities owned by user, then correct page is returned`() {
+        val communityOne = entityUtil.setupCommunity { it.name = "one"; it.city = "one"; it.adminUuid = user.uuid }
+        entityUtil.setupCommunity(user.uuid) { it.name = "two"; it.city = "two" }
+
+        val jsonPath = RestAssured.given().auth().oauth2(accessToken)
+            .contentType(ContentType.JSON)
+            .`when`()["/api/user/community/owned"]
             .then()
             .statusCode(200)
             .extract()
@@ -428,6 +451,34 @@ class CommunityControllerTest {
             .post("/api/user/community/${community.uuid}/request/decline")
             .then()
             .statusCode(400)
+    }
+
+    @Test
+    fun `when retrieving paginated items for specific community with default pagination, then correct page is returned`() {
+        val community = entityUtil.setupCommunity()
+        val itemOne = entityUtil.setupItem { it.name = "one"; it.communityUuid = community.uuid }
+        val itemTwo = entityUtil.setupItem { it.name = "two"; it.communityUuid = community.uuid }
+        val jsonPath = RestAssured.given().auth().oauth2(accessToken)
+            .contentType(ContentType.JSON)
+            .`when`()["/api/user/community/${community.uuid}/item"]
+            .then()
+            .statusCode(200)
+            .extract()
+            .response()
+            .jsonPath()
+
+        assertEquals(true, jsonPath.getBoolean("firstPage"))
+        assertEquals(true, jsonPath.getBoolean("lastPage"))
+        assertEquals(0, jsonPath.getInt("pageNumber"))
+        assertEquals(50, jsonPath.getInt("pageSize"))
+        assertEquals(2, jsonPath.getInt("totalElements"))
+        assertEquals(1, jsonPath.getInt("totalPages"))
+        assertEquals(
+            listOf(
+                ItemDto(ItemModel(itemOne)),
+                ItemDto(ItemModel(itemTwo))
+            ),
+            jsonPath.getList("content", ItemDto::class.java))
     }
 
 

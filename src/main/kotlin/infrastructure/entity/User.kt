@@ -14,7 +14,7 @@ import javax.persistence.*
 @Entity
 @Table(name = "user", schema = "public")
 @Cacheable
-@TypeDef(name = "pgsql_enum", typeClass = EnumArrayType::class,
+@TypeDef(name = "user_role_enum", typeClass = EnumArrayType::class,
     defaultForType = Array<UserRole>::class,
     parameters = [
         Parameter(
@@ -62,8 +62,8 @@ class User : PanacheEntityBase {
     @Column(name = "updated_at")
     lateinit var updatedAt: OffsetDateTime
 
-    @Column(name = "roles")
-    @Type(type = "pgsql_enum")
+    @Column
+    @Type(type = "user_role_enum")
     lateinit var roles: Array<UserRole>
 
     constructor(
@@ -90,5 +90,5 @@ class User : PanacheEntityBase {
         this.updatedAt = OffsetDateTime.now()
     }
 
-    constructor()
+    private constructor()
 }

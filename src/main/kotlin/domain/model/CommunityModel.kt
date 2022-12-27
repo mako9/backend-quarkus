@@ -29,4 +29,20 @@ data class CommunityModel (
         community.longitude,
         community.canBeJoined
     )
+
+    fun toCommunity(): Community {
+        return Community(
+            uuid,
+            name,
+            street,
+            houseNumber,
+            postalCode,
+            city,
+            adminUuid,
+            radius,
+            latitude,
+            longitude,
+            canBeJoined
+        )
+    }
 }

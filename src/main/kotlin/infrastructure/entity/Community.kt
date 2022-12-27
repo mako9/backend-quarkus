@@ -10,9 +10,18 @@ import javax.persistence.*
 
 @Entity
 @Cacheable
-@NamedQuery(name = "Community.getByUserUuid", query = "select c from Community c join UserCommunityRelation ucr on c.uuid = ucr.communityUuid where ucr.userUuid = :userUuid order by name ASC")
 class Community : PanacheEntityBase {
-    companion object : PanacheCompanion<Community>
+    companion object : PanacheCompanion<Community> {
+        const val queryAllByNotUserUuid = "SELECT c FROM Community c " +
+                "LEFT JOIN UserCommunityRelation ucr " +
+                "ON c.uuid = ucr.communityUuid " +
+                "WHERE ucr IS NULL OR ucr.userUuid <> ?1"
+
+        const val queryAllByUserUuid = "SELECT c FROM Community c " +
+                "JOIN UserCommunityRelation ucr " +
+                "ON c.uuid = ucr.communityUuid " +
+                "WHERE ucr.userUuid = ?1"
+    }
 
     @Column
     @Id
@@ -35,6 +44,7 @@ class Community : PanacheEntityBase {
     var city: String? = null
 
     @Column(name = "admin_uuid")
+    @Type(type = "uuid-char")
     lateinit var adminUuid: UUID
 
     @Column
@@ -83,5 +93,5 @@ class Community : PanacheEntityBase {
         this.updatedAt = OffsetDateTime.now()
     }
 
-    constructor()
+    private constructor()
 }
