@@ -19,6 +19,7 @@ data class ItemModel(
     var createdAt: OffsetDateTime = OffsetDateTime.now(),
     var updatedAt: OffsetDateTime = OffsetDateTime.now(),
     var availability: String?,
+    var availableUntil: OffsetDateTime? = null,
     var description: String?
 ) {
 
@@ -36,6 +37,7 @@ data class ItemModel(
         createdAt = item.createdAt,
         updatedAt = item.updatedAt,
         availability = item.availability,
+        availableUntil = item.availableUntil,
         description = item.description
     )
 
@@ -54,6 +56,7 @@ data class ItemModel(
             createdAt,
             updatedAt,
             availability,
+            availableUntil,
             description
         )
     }

@@ -70,6 +70,9 @@ class Item : PanacheEntityBase {
     @Column(name = "availability_json")
     var availability: String? = null
 
+    @Column(name = "available_until")
+    var availableUntil: OffsetDateTime? = null
+
     @Column
     var description: String? = null
 
@@ -87,6 +90,7 @@ class Item : PanacheEntityBase {
         createdAt: OffsetDateTime = OffsetDateTime.now(),
         updatedAt: OffsetDateTime = OffsetDateTime.now(),
         availability: String?,
+        availableUntil: OffsetDateTime?,
         description: String?
     ) : this() {
         this.uuid = uuid
@@ -102,6 +106,7 @@ class Item : PanacheEntityBase {
         this.createdAt = createdAt
         this.updatedAt = updatedAt
         this.availability = availability
+        this.availableUntil = availableUntil
         this.description = description
     }
 

@@ -2,6 +2,7 @@ package api.dto
 
 import common.ItemCategory
 import domain.model.ItemModel
+import java.time.OffsetDateTime
 import java.util.*
 
 data class ItemDto(
@@ -32,6 +33,7 @@ data class ItemDetailDto(
     var communityUuid: UUID,
     var userUuid: UUID,
     var availability: String?,
+    var availableUntil: OffsetDateTime?,
     var description: String?,
     var isOwner: Boolean = false,
     var communityName: String
@@ -49,6 +51,7 @@ data class ItemDetailDto(
         communityUuid = itemModel.communityUuid,
         userUuid = itemModel.userUuid,
         availability = itemModel.availability,
+        availableUntil = itemModel.availableUntil,
         description = itemModel.description,
         communityName = "Unknown"
     )
@@ -64,5 +67,6 @@ data class ItemRequestDto(
     var isActive: Boolean = false,
     var communityUuid: UUID,
     var availability: String? = null,
+    var availableUntil: OffsetDateTime? = null,
     var description: String? = null
 )

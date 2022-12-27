@@ -81,6 +81,7 @@ CREATE TABLE "item" (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     description TEXT,
     availability_json TEXT,
+    available_until TIMESTAMPTZ,
     is_active BOOLEAN DEFAULT TRUE,
     CONSTRAINT "fc_item__community_uuid" FOREIGN KEY (community_uuid) REFERENCES community(uuid),
     CONSTRAINT "fc_item__user_uuid" FOREIGN KEY (user_uuid) REFERENCES "user"(uuid)

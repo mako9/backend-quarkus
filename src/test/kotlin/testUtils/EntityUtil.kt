@@ -97,6 +97,7 @@ class EntityUtil {
             UUID.randomUUID(),
             true,
             availability = null,
+            availableUntil = null,
             description = "description-$uuid"
         )
         intercept(item)

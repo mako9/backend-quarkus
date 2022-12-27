@@ -88,6 +88,7 @@ class ItemController {
             userUuid,
             itemRequestDto.isActive,
             availability = itemRequestDto.availability,
+            availableUntil = itemRequestDto.availableUntil,
             description = itemRequestDto.description
         )
         itemModel = itemService.insertItem(itemModel)
@@ -115,6 +116,7 @@ class ItemController {
             userUuid,
             itemRequestDto.isActive,
             availability = itemRequestDto.availability,
+            availableUntil = itemRequestDto.availableUntil,
             description = itemRequestDto.description
         )
         itemModel = itemService.updateItem(itemModel)
