@@ -16,8 +16,6 @@ data class ItemModel(
     var communityUuid: UUID,
     var userUuid: UUID,
     var isActive: Boolean = true,
-    var createdAt: OffsetDateTime = OffsetDateTime.now(),
-    var updatedAt: OffsetDateTime = OffsetDateTime.now(),
     var availability: String?,
     var availableUntil: OffsetDateTime? = null,
     var description: String?
@@ -34,8 +32,6 @@ data class ItemModel(
         communityUuid = item.communityUuid,
         userUuid = item.userUuid,
         isActive = item.isActive,
-        createdAt = item.createdAt,
-        updatedAt = item.updatedAt,
         availability = item.availability,
         availableUntil = item.availableUntil,
         description = item.description
@@ -53,8 +49,6 @@ data class ItemModel(
             communityUuid,
             userUuid,
             isActive,
-            createdAt,
-            updatedAt,
             availability,
             availableUntil,
             description

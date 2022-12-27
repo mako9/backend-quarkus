@@ -87,8 +87,6 @@ class Item : PanacheEntityBase {
         communityUuid: UUID,
         userUuid: UUID,
         isActive: Boolean,
-        createdAt: OffsetDateTime = OffsetDateTime.now(),
-        updatedAt: OffsetDateTime = OffsetDateTime.now(),
         availability: String?,
         availableUntil: OffsetDateTime?,
         description: String?
@@ -103,8 +101,8 @@ class Item : PanacheEntityBase {
         this.communityUuid = communityUuid
         this.userUuid = userUuid
         this.isActive = isActive
-        this.createdAt = createdAt
-        this.updatedAt = updatedAt
+        this.createdAt = OffsetDateTime.now()
+        this.updatedAt = OffsetDateTime.now()
         this.availability = availability
         this.availableUntil = availableUntil
         this.description = description
