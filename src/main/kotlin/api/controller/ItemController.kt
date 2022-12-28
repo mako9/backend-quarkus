@@ -11,6 +11,7 @@ import io.quarkus.panache.common.Sort
 import org.apache.http.HttpStatus
 import org.eclipse.microprofile.jwt.Claims
 import org.eclipse.microprofile.jwt.JsonWebToken
+import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement
 import org.hibernate.validator.constraints.Range
 import org.jboss.resteasy.reactive.ResponseStatus
 import org.jboss.resteasy.reactive.RestPath
@@ -18,9 +19,11 @@ import java.util.*
 import javax.inject.Inject
 import javax.validation.constraints.Min
 import javax.ws.rs.*
+import javax.ws.rs.core.MediaType
 import javax.ws.rs.core.Response
 
 @Path("/user/item")
+@SecurityRequirement(name = "bearerAuth")
 class ItemController {
     @Inject
     lateinit var itemService: ItemService
