@@ -87,3 +87,12 @@ CREATE TABLE "item" (
     CONSTRAINT "fc_item__user_uuid" FOREIGN KEY (user_uuid) REFERENCES "user"(uuid)
 );
 --rollback DROP TABLE item;
+
+CREATE TABLE "item_image" (
+    uuid CHAR(36) PRIMARY KEY NOT NULL,
+    item_uuid CHAR(36) NOT NULL,
+    path VARCHAR(255) NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT "fc_item_image__item_uuid" FOREIGN KEY (item_uuid) REFERENCES item(uuid)
+);
+--rollback DROP TABLE item_image;

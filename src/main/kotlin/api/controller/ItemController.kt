@@ -11,8 +11,12 @@ import io.quarkus.panache.common.Sort
 import org.apache.http.HttpStatus
 import org.eclipse.microprofile.jwt.Claims
 import org.eclipse.microprofile.jwt.JsonWebToken
+import org.eclipse.microprofile.openapi.annotations.media.Content
+import org.eclipse.microprofile.openapi.annotations.media.Schema
+import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody
 import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement
 import org.hibernate.validator.constraints.Range
+import org.jboss.resteasy.reactive.MultipartForm
 import org.jboss.resteasy.reactive.ResponseStatus
 import org.jboss.resteasy.reactive.RestPath
 import java.util.*
@@ -21,6 +25,7 @@ import javax.validation.constraints.Min
 import javax.ws.rs.*
 import javax.ws.rs.core.MediaType
 import javax.ws.rs.core.Response
+
 
 @Path("/user/item")
 @SecurityRequirement(name = "bearerAuth")
@@ -135,6 +140,40 @@ class ItemController {
         itemService.deleteItem(uuid, getUserUuid())
 
         return Response.noContent().build()
+    }
+
+    @GET
+    @Path("/{uuid}/image")
+    fun getItemImageUuids(
+        @RestPath uuid: UUID
+    ): List<UUID> {
+        return itemService.getImageUuids(uuid)
+    }
+
+    @POST
+    @Path("/{uuid}/image")
+    @Consumes(MediaType.MULTIPART_FORM_DATA)
+    @ResponseStatus(HttpStatus.SC_CREATED)
+    @RequestBody(content = [Content(mediaType = MediaType.MULTIPART_FORM_DATA,
+        schema = Schema(implementation = MultipartDto::class))]
+    )
+    fun uploadImages(
+        @RestPath uuid: UUID,
+        @MultipartForm multipartDto: MultipartDto
+    ) {
+        itemService.saveItemImages(uuid, multipartDto.files)
+    }
+
+    @GET
+    @Path("/image/{uuid}")
+    @Produces(MediaType.APPLICATION_OCTET_STREAM)
+    fun getItemImage(
+        @RestPath uuid: UUID
+    ): Response? {
+        val file = itemService.getItemImage(uuid)
+        val response: Response.ResponseBuilder = Response.ok(file)
+        response.header("Content-Disposition", "attachment; filename=$file")
+        return response.build()
     }
 
     private fun getUserUuid(): UUID {
