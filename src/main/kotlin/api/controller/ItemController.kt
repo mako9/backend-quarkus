@@ -161,7 +161,7 @@ class ItemController {
         @RestPath uuid: UUID,
         @MultipartForm multipartDto: MultipartDto
     ) {
-        itemService.saveItemImages(uuid, multipartDto.files)
+        itemService.saveItemImages(uuid, multipartDto.file)
     }
 
     @GET

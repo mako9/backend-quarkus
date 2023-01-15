@@ -197,7 +197,7 @@ class ItemServiceTest {
     fun `when saving image for item, then Item image entity is created`() {
         val fileUpload = FileUploadMock()
 
-        itemService.saveItemImages(itemOne.uuid, listOf(fileUpload))
+        itemService.saveItemImages(itemOne.uuid, fileUpload)
 
         val storedItemImage = ItemImage.findAll().firstResult()
         assertEquals(itemOne.uuid, storedItemImage?.itemUuid)

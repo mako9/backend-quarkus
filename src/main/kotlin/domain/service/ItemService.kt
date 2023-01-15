@@ -89,17 +89,13 @@ class ItemService {
         return itemImages.map { it.uuid }
     }
 
-    fun saveItemImages(itemUuid: UUID, uploadedFiles: List<FileUpload>) {
-        val images = mutableListOf<ItemImage>()
-        for (uploadedFile in uploadedFiles) {
-            val path = createImagePath(itemUuid, uploadedFile.fileName())
-            Files.copy(uploadedFile.uploadedFile(), path)
-            images.add(ItemImage(
-                itemUuid,
-                path.pathString
-            ))
-        }
-        ItemImage.persist(images)
+    fun saveItemImages(itemUuid: UUID, fileUpload: FileUpload) {
+        val path = createImagePath(itemUuid, fileUpload.fileName())
+        Files.copy(fileUpload.uploadedFile(), path)
+        ItemImage.persist(ItemImage(
+            itemUuid,
+            path.pathString
+        ))
     }
 
     fun getItemImage(uuid: UUID): File {
