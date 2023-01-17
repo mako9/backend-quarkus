@@ -7,20 +7,28 @@ import domain.model.exception.CustomForbiddenException
 import domain.model.sort.ItemSortBy
 import infrastructure.entity.Community
 import infrastructure.entity.Item
+import infrastructure.entity.ItemImage
 import infrastructure.entity.User
 import io.quarkus.panache.common.Sort
 import io.quarkus.test.junit.QuarkusTest
+import org.eclipse.microprofile.config.inject.ConfigProperty
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import testUtils.EntityUtil
+import testUtils.mock.FileUploadMock
+import java.io.File
+import java.nio.file.Files
+import java.nio.file.Paths
 import java.util.*
 import javax.inject.Inject
 
 @QuarkusTest
 class ItemServiceTest {
+    @ConfigProperty(name = "app.storage.item-image.path")
+    private lateinit var imagePath: String
     @Inject
     private lateinit var entityUtil: EntityUtil
     @Inject
@@ -37,21 +45,29 @@ class ItemServiceTest {
     fun beforeEach() {
         user = entityUtil.setupUser()
         community = entityUtil.setupCommunity()
-        itemOne = entityUtil.setupItem { it.name = "aaa"; it.communityUuid = community.uuid; it.userUuid = user.uuid; it.city = "aaa" }
-        itemTwo = entityUtil.setupItem { it.name = "bbb"; it.communityUuid = community.uuid; it.userUuid = user.uuid; it.city = "bbb" }
+        itemOne = entityUtil.setupItem {
+            it.name = "aaa"; it.communityUuid = community.uuid; it.userUuid = user.uuid; it.city = "aaa"
+        }
+        itemTwo = entityUtil.setupItem {
+            it.name = "bbb"; it.communityUuid = community.uuid; it.userUuid = user.uuid; it.city = "bbb"
+        }
         itemThree = entityUtil.setupItem { it.name = "ccc"; it.communityUuid = community.uuid; it.city = "aaa" }
         itemFour = entityUtil.setupItem { it.name = "ddd"; it.communityUuid = community.uuid; it.city = "bbb" }
+
+        Files.createDirectories(Paths.get(imagePath))
     }
 
     @AfterEach
     fun afterEach() {
         entityUtil.deleteAllData()
+        File(imagePath).deleteRecursively()
     }
 
     @Test
     fun `when retrieving paginated items for specific community, then correct page of community models is returned`() {
         val pageConfig = PageConfig()
-        val communityPage = itemService.getItemsPageOfCommunities(listOf(community.uuid), user.uuid, pageConfig, null, null)
+        val communityPage =
+            itemService.getItemsPageOfCommunities(listOf(community.uuid), user.uuid, pageConfig, null, null)
         assertEquals(1, communityPage.totalPages)
         assertEquals(true, communityPage.isFirstPage)
         assertEquals(true, communityPage.isLastPage)
@@ -65,7 +81,13 @@ class ItemServiceTest {
     @Test
     fun `when retrieving paginated items for specific community with pagination and sorting, then correct page of community models is returned`() {
         val pageConfig = PageConfig(pageSize = 1, pageNumber = 1)
-        val communityPage = itemService.getItemsPageOfCommunities(listOf(community.uuid), user.uuid, pageConfig, ItemSortBy.NAME, Sort.Direction.Descending)
+        val communityPage = itemService.getItemsPageOfCommunities(
+            listOf(community.uuid),
+            user.uuid,
+            pageConfig,
+            ItemSortBy.NAME,
+            Sort.Direction.Descending
+        )
         assertEquals(2, communityPage.totalPages)
         assertEquals(false, communityPage.isFirstPage)
         assertEquals(true, communityPage.isLastPage)
@@ -94,7 +116,8 @@ class ItemServiceTest {
     @Test
     fun `when retrieving my paginated items with pagination and sorting, then correct page of community models is returned`() {
         val pageConfig = PageConfig(pageSize = 1, pageNumber = 1)
-        val communityPage = itemService.getItemsPageOfUser(user.uuid, pageConfig, ItemSortBy.CITY, Sort.Direction.Descending)
+        val communityPage =
+            itemService.getItemsPageOfUser(user.uuid, pageConfig, ItemSortBy.CITY, Sort.Direction.Descending)
         assertEquals(2, communityPage.totalPages)
         assertEquals(false, communityPage.isFirstPage)
         assertEquals(true, communityPage.isLastPage)
@@ -155,5 +178,38 @@ class ItemServiceTest {
         }
 
         assertNotNull(Item.find("uuid", itemOne.uuid).firstResult())
+    }
+
+    @Test
+    fun `when getting image UUIDs for item, then list of UUIDs is returned`() {
+        val itemImageOne = entityUtil.setupItemImage { it.itemUuid = itemOne.uuid }
+        val itemImageTwo = entityUtil.setupItemImage { it.itemUuid = itemOne.uuid }
+        val otherItemImage = entityUtil.setupItemImage { it.itemUuid = itemTwo.uuid }
+
+        val result = itemService.getImageUuids(itemOne.uuid)
+        assertEquals(2, result.size)
+        assertTrue(result.contains(itemImageOne.uuid))
+        assertTrue(result.contains(itemImageTwo.uuid))
+        assertFalse(result.contains(otherItemImage.uuid))
+    }
+
+    @Test
+    fun `when saving image for item, then Item image entity is created`() {
+        val fileUpload = FileUploadMock()
+
+        itemService.saveItemImages(itemOne.uuid, fileUpload)
+
+        val storedItemImage = ItemImage.findAll().firstResult()
+        assertEquals(itemOne.uuid, storedItemImage?.itemUuid)
+    }
+
+    @Test
+    fun `when getting item image, then file is returned`() {
+        val file = File("$imagePath/test.jpg")
+        file.createNewFile()
+        val storedItemImage = entityUtil.setupItemImage { it.itemUuid = itemOne.uuid; it.path = file.path }
+
+        val result = itemService.getItemImage(storedItemImage.uuid)
+        assertEquals(file.path, result.path)
     }
 }

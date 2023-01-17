@@ -11,16 +11,23 @@ import io.quarkus.test.junit.QuarkusTest
 import io.quarkus.test.keycloak.client.KeycloakTestClient
 import io.restassured.RestAssured
 import io.restassured.http.ContentType
+import org.eclipse.microprofile.config.inject.ConfigProperty
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import testUtils.EntityUtil
+import java.io.File
+import java.nio.file.Files
+import java.nio.file.Paths
 import java.util.*
 import javax.inject.Inject
 
 @QuarkusTest
 class ItemControllerTest {
+    @ConfigProperty(name = "app.storage.item-image.path")
+    private lateinit var imagePath: String
     @Inject
     private lateinit var entityUtil: EntityUtil
     private val keycloakClient = KeycloakTestClient()
@@ -32,11 +39,14 @@ class ItemControllerTest {
     fun beforeEach() {
         user = entityUtil.setupUser { it.mail = "alice@test.tld" }
         community = entityUtil.setupCommunity()
+
+        Files.createDirectories(Paths.get(imagePath))
     }
 
     @AfterEach
     fun afterEach() {
         entityUtil.deleteAllData()
+        File(imagePath).deleteRecursively()
     }
 
     @Test
@@ -223,5 +233,54 @@ class ItemControllerTest {
             .delete("/api/user/item/${item.uuid}")
             .then()
             .statusCode(403)
+    }
+
+    @Test
+    fun `when getting image UUIDs for an item, then a list of UUIDs is returned`() {
+        val item = entityUtil.setupItem { it.name = "one"; it.communityUuid = community.uuid }
+        val itemImage = entityUtil.setupItemImage { it.itemUuid = item.uuid }
+        val jsonPath = RestAssured.given().auth().oauth2(accessToken)
+            .contentType(ContentType.JSON)
+            .get("/api/user/item/${item.uuid}/image")
+            .then()
+            .statusCode(200)
+            .extract()
+            .response()
+            .jsonPath()
+
+        assertEquals(itemImage.uuid, jsonPath.getList("", UUID::class.java).first())
+    }
+
+    @Test
+    fun `when uploading image for an item, then a correct status is returned`() {
+        val item = entityUtil.setupItem { it.name = "one"; it.communityUuid = community.uuid }
+        val file = File.createTempFile("test", ".jpg")
+        file.deleteOnExit()
+
+        val response = RestAssured.given().auth().oauth2(accessToken)
+            .contentType(ContentType.MULTIPART)
+            .multiPart(file)
+            .post("/api/user/item/${item.uuid}/image")
+            .then()
+            .statusCode(201)
+            .extract()
+            .response()
+            .asByteArray()
+
+        assertNotNull(response)
+    }
+
+    @Test
+    fun `when getting item image by UUID, then a correct status and file is returned`() {
+        val item = entityUtil.setupItem { it.name = "one"; it.communityUuid = community.uuid }
+        val file = File("$imagePath/test.jpg")
+        file.createNewFile()
+        val itemImage = entityUtil.setupItemImage { it.itemUuid = item.uuid; it.path = file.path }
+
+        RestAssured.given().auth().oauth2(accessToken)
+            .contentType(ContentType.JSON)
+            .get("/api/user/item/image/${itemImage.uuid}")
+            .then()
+            .statusCode(200)
     }
 }

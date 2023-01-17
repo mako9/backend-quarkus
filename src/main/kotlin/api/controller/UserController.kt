@@ -8,13 +8,24 @@ import io.quarkus.security.identity.SecurityIdentity
 import org.apache.http.HttpStatus
 import org.eclipse.microprofile.jwt.Claims
 import org.eclipse.microprofile.jwt.JsonWebToken
+import org.eclipse.microprofile.openapi.annotations.enums.SecuritySchemeType
+import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement
+import org.eclipse.microprofile.openapi.annotations.security.SecurityScheme
 import javax.inject.Inject
 import javax.ws.rs.GET
 import javax.ws.rs.PATCH
 import javax.ws.rs.Path
 import javax.ws.rs.core.Response
 
+// register SecurityScheme once
+@SecurityScheme(
+    securitySchemeName = "bearerAuth",
+    type = SecuritySchemeType.HTTP,
+    bearerFormat = "JWT",
+    scheme = "bearer"
+)
 @Path("/user")
+@SecurityRequirement(name = "bearerAuth")
 class UserController {
     @Inject
     lateinit var userService: UserService

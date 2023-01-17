@@ -14,6 +14,7 @@ class EntityUtil {
     fun deleteAllData() {
         UserCommunityRelation.deleteAll()
         UserCommunityJoinRequest.deleteAll()
+        ItemImage.deleteAll()
         Item.deleteAll()
         Community.deleteAll()
         User.deleteAll()
@@ -110,5 +111,19 @@ class EntityUtil {
         item.persist()
 
         return item
+    }
+
+    fun setupItemImage(intercept: (ItemImage) -> Unit = {}): ItemImage {
+        val itemImage = ItemImage(
+            itemUuid = UUID.randomUUID(),
+            path = "./item-images/${UUID.randomUUID()}.jpg"
+        )
+        intercept(itemImage)
+        if (Item.find("uuid", itemImage.itemUuid).firstResult() == null) {
+            setupItem { it.uuid = itemImage.itemUuid }
+        }
+        itemImage.persist()
+
+        return itemImage
     }
 }
