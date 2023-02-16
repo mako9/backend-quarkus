@@ -74,8 +74,8 @@ class ItemServiceTest {
         assertEquals(pageConfig.pageSize, communityPage.pageSize)
         assertEquals(pageConfig.pageNumber, communityPage.pageNumber)
         assertEquals(2, communityPage.content.size)
-        assertEquals(ItemModel(itemThree), communityPage.content.first())
-        assertEquals(ItemModel(itemFour), communityPage.content.last())
+        assertEquals(ItemModel(Item.find("uuid", itemThree.uuid).singleResult()), communityPage.content.first())
+        assertEquals(ItemModel(Item.find("uuid", itemFour.uuid).singleResult()), communityPage.content.last())
     }
 
     @Test
@@ -94,7 +94,7 @@ class ItemServiceTest {
         assertEquals(pageConfig.pageSize, communityPage.pageSize)
         assertEquals(pageConfig.pageNumber, communityPage.pageNumber)
         assertEquals(1, communityPage.content.size)
-        assertEquals(ItemModel(itemThree), communityPage.content.first())
+        assertEquals(ItemModel(Item.find("uuid", itemThree.uuid).singleResult()), communityPage.content.first())
     }
 
     @Test
@@ -109,8 +109,8 @@ class ItemServiceTest {
         assertEquals(pageConfig.pageSize, communityPage.pageSize)
         assertEquals(pageConfig.pageNumber, communityPage.pageNumber)
         assertEquals(2, communityPage.content.size)
-        assertEquals(ItemModel(itemOne), communityPage.content.first())
-        assertEquals(ItemModel(itemTwo), communityPage.content.last())
+        assertEquals(ItemModel(Item.find("uuid", itemOne.uuid).singleResult()), communityPage.content.first())
+        assertEquals(ItemModel(Item.find("uuid", itemTwo.uuid).singleResult()), communityPage.content.last())
     }
 
     @Test
@@ -124,7 +124,7 @@ class ItemServiceTest {
         assertEquals(pageConfig.pageSize, communityPage.pageSize)
         assertEquals(pageConfig.pageNumber, communityPage.pageNumber)
         assertEquals(1, communityPage.content.size)
-        assertEquals(ItemModel(itemOne), communityPage.content.first())
+        assertEquals(ItemModel(Item.find("uuid", itemOne.uuid).singleResult()), communityPage.content.first())
     }
 
     @Test

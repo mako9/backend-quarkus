@@ -36,7 +36,7 @@ data class ItemDetailDto(
     var availableUntil: OffsetDateTime?,
     var description: String?,
     var isOwner: Boolean = false,
-    var communityName: String
+    var communityName: String?
 ) {
 
     constructor(itemModel: ItemModel): this(
@@ -53,7 +53,7 @@ data class ItemDetailDto(
         availability = itemModel.availability,
         availableUntil = itemModel.availableUntil,
         description = itemModel.description,
-        communityName = "Unknown"
+        communityName = itemModel.communityModel?.name
     )
 }
 

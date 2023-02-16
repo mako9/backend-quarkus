@@ -76,6 +76,10 @@ class Item : PanacheEntityBase {
     @Column
     var description: String? = null
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "community_uuid", referencedColumnName = "uuid", insertable = false, updatable = false)
+    var community: Community? = null
+
     constructor(
         uuid: UUID,
         name: String,

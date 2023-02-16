@@ -6,6 +6,7 @@ import api.dto.ItemRequestDto
 import common.ItemCategory
 import domain.model.ItemModel
 import infrastructure.entity.Community
+import infrastructure.entity.Item
 import infrastructure.entity.User
 import io.quarkus.test.junit.QuarkusTest
 import io.quarkus.test.keycloak.client.KeycloakTestClient
@@ -88,7 +89,7 @@ class ItemControllerTest {
             .response()
             .jsonPath()
 
-        assertEquals(ItemDetailDto(ItemModel(item)), jsonPath.getObject("", ItemDetailDto::class.java))
+        assertEquals(ItemDetailDto(ItemModel(Item.find("uuid", item.uuid).singleResult())), jsonPath.getObject("", ItemDetailDto::class.java))
     }
 
     @Test

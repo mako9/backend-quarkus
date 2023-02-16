@@ -18,7 +18,8 @@ data class ItemModel(
     var isActive: Boolean = true,
     var availability: String?,
     var availableUntil: OffsetDateTime? = null,
-    var description: String?
+    var description: String?,
+    var communityModel: CommunityModel? = null
 ) {
 
     constructor(item: Item) : this(
@@ -34,7 +35,8 @@ data class ItemModel(
         isActive = item.isActive,
         availability = item.availability,
         availableUntil = item.availableUntil,
-        description = item.description
+        description = item.description,
+        communityModel = if (item.community != null) CommunityModel(item.community!!) else null
     )
 
     fun toItem(): Item {
