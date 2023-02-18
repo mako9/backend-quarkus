@@ -10,14 +10,14 @@ data class ItemDto(
     val name: String,
     var categories: List<ItemCategory>,
     var communityUuid: UUID,
-    var communityName: String
+    var communityName: String?
 ) {
     constructor(itemModel: ItemModel): this(
         uuid = itemModel.uuid,
         name = itemModel.name,
         categories = itemModel.categories,
         communityUuid = itemModel.communityUuid,
-        communityName = "Unknown"
+        communityName = itemModel.communityModel?.name
     )
 }
 

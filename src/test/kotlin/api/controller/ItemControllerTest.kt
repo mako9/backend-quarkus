@@ -71,8 +71,8 @@ class ItemControllerTest {
         assertEquals(1, jsonPath.getInt("totalPages"))
         assertEquals(
             listOf(
-                ItemDto(ItemModel(itemOne)),
-                ItemDto(ItemModel(itemTwo))
+                ItemDto(ItemModel(Item.find("uuid", itemOne.uuid).singleResult())),
+                ItemDto(ItemModel(Item.find("uuid", itemTwo.uuid).singleResult()))
             ),
             jsonPath.getList("content", ItemDto::class.java))
     }
@@ -115,8 +115,8 @@ class ItemControllerTest {
         assertEquals(1, jsonPath.getInt("totalPages"))
         assertEquals(
             listOf(
-                ItemDto(ItemModel(itemOne)),
-                ItemDto(ItemModel(itemTwo))
+                ItemDto(ItemModel(Item.find("uuid", itemOne.uuid).singleResult())),
+                ItemDto(ItemModel(Item.find("uuid", itemTwo.uuid).singleResult()))
             ),
             jsonPath.getList("content", ItemDto::class.java))
     }

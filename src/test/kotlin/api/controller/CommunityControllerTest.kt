@@ -9,6 +9,7 @@ import domain.model.CommunityModel
 import domain.model.ItemModel
 import domain.model.UserModel
 import domain.model.sort.CommunitySortBy
+import infrastructure.entity.Item
 import infrastructure.entity.User
 import io.quarkus.panache.common.Sort
 import io.quarkus.test.junit.QuarkusTest
@@ -475,8 +476,8 @@ class CommunityControllerTest {
         assertEquals(1, jsonPath.getInt("totalPages"))
         assertEquals(
             listOf(
-                ItemDto(ItemModel(itemOne)),
-                ItemDto(ItemModel(itemTwo))
+                ItemDto(ItemModel(Item.find("uuid", itemOne.uuid).singleResult())),
+                ItemDto(ItemModel(Item.find("uuid", itemTwo.uuid).singleResult()))
             ),
             jsonPath.getList("content", ItemDto::class.java))
     }
