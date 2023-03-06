@@ -24,6 +24,7 @@ import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.*
 import javax.inject.Inject
+import kotlin.io.path.Path
 
 @QuarkusTest
 class ItemServiceTest {
@@ -197,10 +198,22 @@ class ItemServiceTest {
     fun `when saving image for item, then Item image entity is created`() {
         val fileUpload = FileUploadMock()
 
-        itemService.saveItemImages(itemOne.uuid, fileUpload)
+        itemService.saveItemImages(itemOne.uuid, fileUpload, user.uuid)
 
         val storedItemImage = ItemImage.findAll().firstResult()
         assertEquals(itemOne.uuid, storedItemImage?.itemUuid)
+    }
+
+    @Test
+    fun `when saving image for item with no rights, then Item image entity is not created`() {
+        val fileUpload = FileUploadMock()
+
+        assertThrows<CustomForbiddenException> {
+            itemService.saveItemImages(itemOne.uuid, fileUpload, UUID.randomUUID())
+        }
+
+        val storedItemImage = ItemImage.findAll().firstResult()
+        assertNull(storedItemImage)
     }
 
     @Test
@@ -209,7 +222,29 @@ class ItemServiceTest {
         file.createNewFile()
         val storedItemImage = entityUtil.setupItemImage { it.itemUuid = itemOne.uuid; it.path = file.path }
 
-        val result = itemService.getItemImage(storedItemImage.uuid)
+        val result = itemService.getItemImageFile(storedItemImage.uuid)
         assertEquals(file.path, result.path)
+    }
+
+    @Test
+    fun `when deleting item image, then file does not exist anymore`() {
+        val file = File("$imagePath/test.jpg")
+        file.createNewFile()
+        val storedItemImage = entityUtil.setupItemImage { it.itemUuid = itemOne.uuid; it.path = file.path }
+
+        itemService.deleteItemImage(storedItemImage.uuid, user.uuid)
+        assertFalse(Files.exists(Path(file.path)))
+        assertNull(ItemImage.find("uuid", storedItemImage.uuid).firstResult())
+    }
+
+    @Test
+    fun `when deleting image with no rights, then Item image is not deleted`() {
+        val storedItemImage = entityUtil.setupItemImage { it.itemUuid = itemOne.uuid }
+
+        assertThrows<CustomForbiddenException> {
+            itemService.deleteItemImage(storedItemImage.uuid, UUID.randomUUID())
+        }
+
+        assertNotNull(ItemImage.find("uuid", storedItemImage.uuid).firstResult())
     }
 }

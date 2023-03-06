@@ -254,7 +254,7 @@ class ItemControllerTest {
 
     @Test
     fun `when uploading image for an item, then a correct status is returned`() {
-        val item = entityUtil.setupItem { it.name = "one"; it.communityUuid = community.uuid }
+        val item = entityUtil.setupItem { it.name = "one"; it.communityUuid = community.uuid; it.userUuid = user.uuid }
         val file = File.createTempFile("test", ".jpg")
         file.deleteOnExit()
 
@@ -283,5 +283,19 @@ class ItemControllerTest {
             .get("/api/user/item/image/${itemImage.uuid}")
             .then()
             .statusCode(200)
+    }
+
+    @Test
+    fun `when deleting item image by UUID, then a correct status is returned`() {
+        val item = entityUtil.setupItem { it.name = "one"; it.communityUuid = community.uuid; it.userUuid = user.uuid }
+        val file = File("$imagePath/test.jpg")
+        file.createNewFile()
+        val itemImage = entityUtil.setupItemImage { it.itemUuid = item.uuid; it.path = file.path }
+
+        RestAssured.given().auth().oauth2(accessToken)
+            .contentType(ContentType.JSON)
+            .delete("/api/user/item/image/${itemImage.uuid}")
+            .then()
+            .statusCode(204)
     }
 }

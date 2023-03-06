@@ -21,6 +21,7 @@ import java.util.*
 import javax.enterprise.context.ApplicationScoped
 import javax.persistence.EntityNotFoundException
 import javax.transaction.Transactional
+import kotlin.io.path.Path
 import kotlin.io.path.pathString
 
 @ApplicationScoped
@@ -89,7 +90,9 @@ class ItemService {
         return itemImages.map { it.uuid }
     }
 
-    fun saveItemImages(itemUuid: UUID, fileUpload: FileUpload) {
+    fun saveItemImages(itemUuid: UUID, fileUpload: FileUpload, userUuid: UUID) {
+        val item = getItemByUuid(itemUuid) ?: throw EntityNotFoundException("No item for UUID: $itemUuid")
+        checkUserRight(userUuid, item)
         val path = createImagePath(itemUuid, fileUpload.fileName())
         Files.copy(fileUpload.uploadedFile(), path)
         ItemImage.persist(ItemImage(
@@ -98,15 +101,27 @@ class ItemService {
         ))
     }
 
-    fun getItemImage(uuid: UUID): File {
-        val itemImage = ItemImage
-            .find("uuid", uuid)
-            .firstResult() ?: throw EntityNotFoundException("No item image for UUID: $uuid")
+    fun getItemImageFile(uuid: UUID): File {
+        val itemImage = getItemImage(uuid)
         return File(itemImage.path)
+    }
+
+    fun deleteItemImage(uuid: UUID, userUuid: UUID) {
+        val itemImage = getItemImage(uuid)
+        val item = getItemByUuid(itemImage.itemUuid) ?: throw EntityNotFoundException("No item for UUID: $uuid")
+        checkUserRight(userUuid, item)
+        Files.deleteIfExists(Path(itemImage.path))
+        itemImage.delete()
     }
 
     private fun getItemByUuid(uuid: UUID): Item? {
         return Item.find("uuid", uuid).firstResult()
+    }
+
+    private fun getItemImage(uuid: UUID): ItemImage {
+        return ItemImage
+            .find("uuid", uuid)
+            .firstResult() ?: throw EntityNotFoundException("No item image for UUID: $uuid")
     }
 
     private fun checkUserRight(userUuid: UUID, item: Item) {

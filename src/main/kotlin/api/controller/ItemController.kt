@@ -161,7 +161,7 @@ class ItemController {
         @RestPath uuid: UUID,
         @MultipartForm multipartDto: MultipartDto
     ) {
-        itemService.saveItemImages(uuid, multipartDto.file)
+        itemService.saveItemImages(uuid, multipartDto.file, getUserUuid())
     }
 
     @GET
@@ -170,10 +170,21 @@ class ItemController {
     fun getItemImage(
         @RestPath uuid: UUID
     ): Response? {
-        val file = itemService.getItemImage(uuid)
+        val file = itemService.getItemImageFile(uuid)
         val response: Response.ResponseBuilder = Response.ok(file)
         response.header("Content-Disposition", "attachment; filename=$file")
         return response.build()
+    }
+
+    @DELETE
+    @Path("/image/{uuid}")
+    @ResponseStatus(HttpStatus.SC_NO_CONTENT)
+    fun deleteItemImage(
+        @RestPath uuid: UUID
+    ): Response {
+        itemService.deleteItemImage(uuid, getUserUuid())
+
+        return Response.noContent().build()
     }
 
     private fun getUserUuid(): UUID {
