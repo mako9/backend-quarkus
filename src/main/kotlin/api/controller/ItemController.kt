@@ -16,7 +16,7 @@ import org.eclipse.microprofile.openapi.annotations.media.Schema
 import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody
 import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement
 import org.hibernate.validator.constraints.Range
-import org.jboss.resteasy.reactive.MultipartForm
+import org.jboss.resteasy.annotations.providers.multipart.MultipartForm
 import org.jboss.resteasy.reactive.ResponseStatus
 import org.jboss.resteasy.reactive.RestPath
 import java.util.*
