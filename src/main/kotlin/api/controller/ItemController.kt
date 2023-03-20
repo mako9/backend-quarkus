@@ -19,6 +19,7 @@ import org.hibernate.validator.constraints.Range
 import org.jboss.resteasy.annotations.providers.multipart.MultipartForm
 import org.jboss.resteasy.reactive.ResponseStatus
 import org.jboss.resteasy.reactive.RestPath
+import java.net.URI
 import java.util.*
 import javax.inject.Inject
 import javax.validation.constraints.Min
@@ -160,8 +161,10 @@ class ItemController {
     fun uploadImages(
         @RestPath uuid: UUID,
         @MultipartForm multipartDto: MultipartDto
-    ) {
-        itemService.saveItemImages(uuid, multipartDto.file, getUserUuid())
+    ): Response? {
+        val imageUuid = itemService.saveItemImage(uuid, multipartDto.file, getUserUuid())
+
+        return Response.created(URI.create("/image/${imageUuid}")).build()
     }
 
     @GET

@@ -14,12 +14,12 @@ import io.restassured.RestAssured
 import io.restassured.http.ContentType
 import org.eclipse.microprofile.config.inject.ConfigProperty
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import testUtils.EntityUtil
 import java.io.File
+import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.*
@@ -266,9 +266,8 @@ class ItemControllerTest {
             .statusCode(201)
             .extract()
             .response()
-            .asByteArray()
 
-        assertNotNull(response)
+        assertTrue(response.header("Location").contains("/image/"))
     }
 
     @Test

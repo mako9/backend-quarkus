@@ -198,7 +198,7 @@ class ItemServiceTest {
     fun `when saving image for item, then Item image entity is created`() {
         val fileUpload = FileUploadMock()
 
-        itemService.saveItemImages(itemOne.uuid, fileUpload, user.uuid)
+        itemService.saveItemImage(itemOne.uuid, fileUpload, user.uuid)
 
         val storedItemImage = ItemImage.findAll().firstResult()
         assertEquals(itemOne.uuid, storedItemImage?.itemUuid)
@@ -209,7 +209,7 @@ class ItemServiceTest {
         val fileUpload = FileUploadMock()
 
         assertThrows<CustomForbiddenException> {
-            itemService.saveItemImages(itemOne.uuid, fileUpload, UUID.randomUUID())
+            itemService.saveItemImage(itemOne.uuid, fileUpload, UUID.randomUUID())
         }
 
         val storedItemImage = ItemImage.findAll().firstResult()

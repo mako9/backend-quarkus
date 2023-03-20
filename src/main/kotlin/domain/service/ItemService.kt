@@ -90,15 +90,17 @@ class ItemService {
         return itemImages.map { it.uuid }
     }
 
-    fun saveItemImages(itemUuid: UUID, fileUpload: FileUpload, userUuid: UUID) {
+    fun saveItemImage(itemUuid: UUID, fileUpload: FileUpload, userUuid: UUID): UUID {
         val item = getItemByUuid(itemUuid) ?: throw EntityNotFoundException("No item for UUID: $itemUuid")
         checkUserRight(userUuid, item)
         val path = createImagePath(itemUuid, fileUpload.fileName())
         Files.copy(fileUpload.uploadedFile(), path)
-        ItemImage.persist(ItemImage(
+        val image = ItemImage(
             itemUuid,
             path.pathString
-        ))
+        )
+        ItemImage.persist(image)
+        return image.uuid
     }
 
     fun getItemImageFile(uuid: UUID): File {
