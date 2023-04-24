@@ -9,6 +9,9 @@ import infrastructure.entity.Item
 import infrastructure.entity.ItemImage
 import io.quarkus.panache.common.Page
 import io.quarkus.panache.common.Sort
+import jakarta.enterprise.context.ApplicationScoped
+import jakarta.persistence.EntityNotFoundException
+import jakarta.transaction.Transactional
 import org.eclipse.microprofile.config.inject.ConfigProperty
 import org.jboss.resteasy.reactive.multipart.FileUpload
 import java.io.File
@@ -18,9 +21,6 @@ import java.nio.file.Paths
 import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.util.*
-import javax.enterprise.context.ApplicationScoped
-import javax.persistence.EntityNotFoundException
-import javax.transaction.Transactional
 import kotlin.io.path.pathString
 
 @ApplicationScoped
@@ -29,16 +29,32 @@ class ItemService {
     @ConfigProperty(name = "app.storage.item-image.path")
     private lateinit var imagePath: String
 
-    fun getItemsPageOfCommunities(communityUuids: List<UUID>, userUuid: UUID, pageConfig: PageConfig, sortBy: ItemSortBy?, sortDirection: Sort.Direction?): PageModel<ItemModel> {
+    fun getItemsPageOfCommunities(
+        communityUuids: List<UUID>,
+        userUuid: UUID,
+        pageConfig: PageConfig,
+        sortBy: ItemSortBy?,
+        sortDirection: Sort.Direction?
+    ): PageModel<ItemModel> {
         val sortByValue = sortBy?.name ?: ItemSortBy.NAME.name
         val sortDirectionValue = sortDirection ?: Sort.Direction.Ascending
         val query = Item
-            .find("communityUuid IN ?1 AND userUuid <> ?2", sort = Sort.by(sortByValue, sortDirectionValue), communityUuids, userUuid)
+            .find(
+                "communityUuid IN ?1 AND userUuid <> ?2",
+                sort = Sort.by(sortByValue, sortDirectionValue),
+                communityUuids,
+                userUuid
+            )
             .page(Page.of(pageConfig.pageNumber, pageConfig.pageSize))
         return PageModel.of(query, ::ItemModel)
     }
 
-    fun getItemsPageOfUser(userUuid: UUID, pageConfig: PageConfig, sortBy: ItemSortBy?, sortDirection: Sort.Direction?): PageModel<ItemModel> {
+    fun getItemsPageOfUser(
+        userUuid: UUID,
+        pageConfig: PageConfig,
+        sortBy: ItemSortBy?,
+        sortDirection: Sort.Direction?
+    ): PageModel<ItemModel> {
         val sortByValue = sortBy?.name ?: ItemSortBy.NAME.name
         val sortDirectionValue = sortDirection ?: Sort.Direction.Ascending
         val query = Item
@@ -92,10 +108,12 @@ class ItemService {
     fun saveItemImages(itemUuid: UUID, fileUpload: FileUpload) {
         val path = createImagePath(itemUuid, fileUpload.fileName())
         Files.copy(fileUpload.uploadedFile(), path)
-        ItemImage.persist(ItemImage(
-            itemUuid,
-            path.pathString
-        ))
+        ItemImage.persist(
+            ItemImage(
+                itemUuid,
+                path.pathString
+            )
+        )
     }
 
     fun getItemImage(uuid: UUID): File {

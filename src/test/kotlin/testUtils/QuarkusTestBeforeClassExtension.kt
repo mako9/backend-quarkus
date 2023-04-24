@@ -1,8 +1,8 @@
 package testUtils
 
 import io.quarkus.test.junit.callback.QuarkusTestBeforeClassCallback
+import jakarta.enterprise.inject.spi.CDI
 import org.junit.platform.commons.support.ModifierSupport
-import javax.enterprise.inject.spi.CDI
 
 
 /**
@@ -14,7 +14,7 @@ import javax.enterprise.inject.spi.CDI
 class QuarkusTestBeforeClassExtension : QuarkusTestBeforeClassCallback {
 
     override fun beforeClass(testClass: Class<*>?) {
-        if(isTestClassInnerClass(testClass)) {
+        if (isTestClassInnerClass(testClass)) {
             print("Skip deletion of data in BeforeAllCallback for inner class.")
             return
         }

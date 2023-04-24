@@ -10,16 +10,21 @@ import infrastructure.entity.UserCommunityJoinRequest
 import infrastructure.entity.UserCommunityRelation
 import io.quarkus.panache.common.Page
 import io.quarkus.panache.common.Sort
+import jakarta.enterprise.context.ApplicationScoped
+import jakarta.persistence.EntityNotFoundException
+import jakarta.transaction.Transactional
 import java.util.*
-import javax.enterprise.context.ApplicationScoped
-import javax.persistence.EntityNotFoundException
-import javax.transaction.Transactional
 
 @ApplicationScoped
 @Transactional
 class CommunityService {
 
-    fun getCommunitiesPage(userUuid: UUID, pageConfig: PageConfig, sortBy: CommunitySortBy?, sortDirection: Sort.Direction?): PageModel<CommunityModel> {
+    fun getCommunitiesPage(
+        userUuid: UUID,
+        pageConfig: PageConfig,
+        sortBy: CommunitySortBy?,
+        sortDirection: Sort.Direction?
+    ): PageModel<CommunityModel> {
         val sortByValue = sortBy?.name ?: CommunitySortBy.NAME.name
         val sortDirectionValue = sortDirection ?: Sort.Direction.Ascending
         val query = Community
@@ -28,7 +33,12 @@ class CommunityService {
         return PageModel.of(query, ::CommunityModel)
     }
 
-    fun getCommunitiesPageByUser(userUuid: UUID, pageConfig: PageConfig, sortBy: CommunitySortBy?, sortDirection: Sort.Direction?): PageModel<CommunityModel> {
+    fun getCommunitiesPageByUser(
+        userUuid: UUID,
+        pageConfig: PageConfig,
+        sortBy: CommunitySortBy?,
+        sortDirection: Sort.Direction?
+    ): PageModel<CommunityModel> {
         val sortByValue = sortBy?.name ?: CommunitySortBy.NAME.name
         val sortDirectionValue = sortDirection ?: Sort.Direction.Ascending
         val query = Community
@@ -37,7 +47,12 @@ class CommunityService {
         return PageModel.of(query, ::CommunityModel)
     }
 
-    fun getCommunitiesPageByAdmin(adminUuid: UUID, pageConfig: PageConfig, sortBy: CommunitySortBy?, sortDirection: Sort.Direction?): PageModel<CommunityModel> {
+    fun getCommunitiesPageByAdmin(
+        adminUuid: UUID,
+        pageConfig: PageConfig,
+        sortBy: CommunitySortBy?,
+        sortDirection: Sort.Direction?
+    ): PageModel<CommunityModel> {
         val sortByValue = sortBy?.name ?: CommunitySortBy.NAME.name
         val sortDirectionValue = sortDirection ?: Sort.Direction.Ascending
         val query = Community
@@ -46,7 +61,7 @@ class CommunityService {
         return PageModel.of(query, ::CommunityModel)
     }
 
-    fun insertCommunity(communityModel: CommunityModel): CommunityModel  {
+    fun insertCommunity(communityModel: CommunityModel): CommunityModel {
         val community = communityModel.toCommunity()
         community.persist()
         UserCommunityRelation(
@@ -56,8 +71,9 @@ class CommunityService {
         return CommunityModel(community)
     }
 
-    fun updateCommunity(communityModel: CommunityModel): CommunityModel  {
-        val community = getCommunity(communityModel.uuid) ?: throw EntityNotFoundException("No community for UUID: ${communityModel.uuid}")
+    fun updateCommunity(communityModel: CommunityModel): CommunityModel {
+        val community = getCommunity(communityModel.uuid)
+            ?: throw EntityNotFoundException("No community for UUID: ${communityModel.uuid}")
         community.name = communityModel.name
         community.street = communityModel.street
         community.houseNumber = communityModel.houseNumber
@@ -87,7 +103,8 @@ class CommunityService {
     }
 
     fun joinCommunity(userUuid: UUID, communityUuid: UUID) {
-        val community = getCommunity(communityUuid) ?: throw EntityNotFoundException("No community for UUID: $communityUuid")
+        val community =
+            getCommunity(communityUuid) ?: throw EntityNotFoundException("No community for UUID: $communityUuid")
         if (!community.canBeJoined) throw CustomBadRequestException("Community can not be joined.")
         UserCommunityJoinRequest(
             userUuid,
@@ -97,7 +114,9 @@ class CommunityService {
 
     fun leaveCommunity(userUuid: UUID, communityUuid: UUID) {
         getCommunity(communityUuid) ?: throw EntityNotFoundException("No community for UUID: $communityUuid")
-        val relation = UserCommunityRelation.find("userUuid = ?1 AND communityUuid = ?2", userUuid, communityUuid).firstResult() ?: throw CustomBadRequestException("Not a member of community: $communityUuid")
+        val relation =
+            UserCommunityRelation.find("userUuid = ?1 AND communityUuid = ?2", userUuid, communityUuid).firstResult()
+                ?: throw CustomBadRequestException("Not a member of community: $communityUuid")
         relation.delete()
     }
 
@@ -116,18 +135,21 @@ class CommunityService {
     }
 
     fun isUserCommunityMember(communityUuid: UUID, userUuid: UUID): Boolean {
-        return UserCommunityRelation.find("communityUuid = ?1 AND userUuid = ?2", communityUuid, userUuid).firstResult() != null
+        return UserCommunityRelation.find("communityUuid = ?1 AND userUuid = ?2", communityUuid, userUuid)
+            .firstResult() != null
     }
 
     fun hasUserRequestedMembership(communityUuid: UUID, userUuid: UUID): Boolean {
-        return UserCommunityJoinRequest.find("communityUuid = ?1 AND userUuid = ?2", communityUuid, userUuid).firstResult() != null
+        return UserCommunityJoinRequest.find("communityUuid = ?1 AND userUuid = ?2", communityUuid, userUuid)
+            .firstResult() != null
     }
 
-    private fun getRequests(communityUuid: UUID, userUuids: List<UUID>): List<UserCommunityJoinRequest>  {
+    private fun getRequests(communityUuid: UUID, userUuids: List<UUID>): List<UserCommunityJoinRequest> {
         val requests = UserCommunityJoinRequest
             .find("communityUuid = ?1 AND userUuid IN ?2", communityUuid, userUuids)
             .list()
-        val userUuidsWithMissingRequests = userUuids.filter { userUuid -> !requests.map { it.userUuid }.contains(userUuid) }
+        val userUuidsWithMissingRequests =
+            userUuids.filter { userUuid -> !requests.map { it.userUuid }.contains(userUuid) }
         if (userUuidsWithMissingRequests.isNotEmpty()) throw CustomBadRequestException("No requests found for users: $userUuidsWithMissingRequests")
         return requests
     }

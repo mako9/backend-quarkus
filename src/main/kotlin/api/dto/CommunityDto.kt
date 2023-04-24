@@ -1,10 +1,10 @@
 package api.dto
 
 import domain.model.CommunityModel
+import jakarta.validation.constraints.Min
+import jakarta.validation.constraints.NotBlank
 import org.hibernate.validator.constraints.Range
 import java.util.*
-import javax.validation.constraints.Min
-import javax.validation.constraints.NotBlank
 
 data class CommunityDto(
     val uuid: UUID,
@@ -13,7 +13,7 @@ data class CommunityDto(
     var latitude: Double,
     var longitude: Double
 ) {
-    constructor(communityModel: CommunityModel): this(
+    constructor(communityModel: CommunityModel) : this(
         uuid = communityModel.uuid,
         name = communityModel.name,
         radius = communityModel.radius,
@@ -49,7 +49,7 @@ data class CommunityDetailDto(
         }
     }
 
-    constructor(communityModel: CommunityModel): this(
+    constructor(communityModel: CommunityModel) : this(
         uuid = communityModel.uuid,
         name = communityModel.name,
         street = communityModel.street,

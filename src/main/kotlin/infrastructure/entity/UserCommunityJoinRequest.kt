@@ -2,11 +2,11 @@ package infrastructure.entity
 
 import io.quarkus.hibernate.orm.panache.kotlin.PanacheCompanion
 import io.quarkus.hibernate.orm.panache.kotlin.PanacheEntityBase
-import org.hibernate.annotations.Type
+import jakarta.persistence.*
+import org.hibernate.annotations.UuidGenerator
 import java.io.Serializable
 import java.time.OffsetDateTime
 import java.util.*
-import javax.persistence.*
 
 @Entity
 @Cacheable
@@ -17,12 +17,12 @@ class UserCommunityJoinRequest : PanacheEntityBase {
 
     @Column(name = "user_uuid")
     @Id
-    @Type(type = "uuid-char")
+    @UuidGenerator
     lateinit var userUuid: UUID
 
     @Column(name = "community_uuid")
     @Id
-    @Type(type = "uuid-char")
+    @UuidGenerator
     lateinit var communityUuid: UUID
 
     @Column(name = "created_at")
@@ -43,4 +43,4 @@ class UserCommunityJoinRequest : PanacheEntityBase {
 private data class UserCommunityJoinRequestId(
     val userUuid: UUID = UUID.randomUUID(),
     val communityUuid: UUID = UUID.randomUUID()
-): Serializable
+) : Serializable

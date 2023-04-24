@@ -4,38 +4,29 @@ import com.vladmihalcea.hibernate.type.array.EnumArrayType
 import common.ItemCategory
 import io.quarkus.hibernate.orm.panache.kotlin.PanacheCompanion
 import io.quarkus.hibernate.orm.panache.kotlin.PanacheEntityBase
-import org.hibernate.annotations.Parameter
+import jakarta.persistence.*
 import org.hibernate.annotations.Type
-import org.hibernate.annotations.TypeDef
+import org.hibernate.annotations.UuidGenerator
 import java.time.OffsetDateTime
 import java.util.*
-import javax.persistence.*
 
 
 @Entity
 @Cacheable
-@TypeDef(name = "item_category_enum", typeClass = EnumArrayType::class,
-    defaultForType = Array<ItemCategory>::class,
-    parameters = [
-        Parameter(
-            name = EnumArrayType.SQL_ARRAY_TYPE,
-            value = "item_category"
-        )
-    ]
-)
 class Item : PanacheEntityBase {
     companion object : PanacheCompanion<Item>
 
     @Column
     @Id
-    @Type(type = "uuid-char")
+    @UuidGenerator
     lateinit var uuid: UUID
 
     @Column
     lateinit var name: String
 
     @Column
-    @Type(type = "item_category_enum")
+    @Enumerated(EnumType.STRING)
+    @Type(EnumArrayType::class)
     lateinit var categories: Array<ItemCategory>
 
     @Column
@@ -51,11 +42,11 @@ class Item : PanacheEntityBase {
     var city: String? = null
 
     @Column(name = "community_uuid")
-    @Type(type = "uuid-char")
+    @UuidGenerator
     lateinit var communityUuid: UUID
 
     @Column(name = "user_uuid")
-    @Type(type = "uuid-char")
+    @UuidGenerator
     lateinit var userUuid: UUID
 
     @Column(name = "is_active")

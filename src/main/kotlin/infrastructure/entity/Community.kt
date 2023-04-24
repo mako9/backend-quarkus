@@ -2,10 +2,13 @@ package infrastructure.entity
 
 import io.quarkus.hibernate.orm.panache.kotlin.PanacheCompanion
 import io.quarkus.hibernate.orm.panache.kotlin.PanacheEntityBase
-import org.hibernate.annotations.Type
+import jakarta.persistence.Cacheable
+import jakarta.persistence.Column
+import jakarta.persistence.Entity
+import jakarta.persistence.Id
+import org.hibernate.annotations.UuidGenerator
 import java.time.OffsetDateTime
 import java.util.*
-import javax.persistence.*
 
 
 @Entity
@@ -25,7 +28,7 @@ class Community : PanacheEntityBase {
 
     @Column
     @Id
-    @Type(type = "uuid-char")
+    @UuidGenerator
     lateinit var uuid: UUID
 
     @Column(length = 100, name = "name")
@@ -44,7 +47,7 @@ class Community : PanacheEntityBase {
     var city: String? = null
 
     @Column(name = "admin_uuid")
-    @Type(type = "uuid-char")
+    @UuidGenerator
     lateinit var adminUuid: UUID
 
     @Column
