@@ -88,7 +88,7 @@ class CommunityService {
 
     fun joinCommunity(userUuid: UUID, communityUuid: UUID) {
         val community = getCommunity(communityUuid) ?: throw EntityNotFoundException("No community for UUID: $communityUuid")
-        if (!community.canBeJoined) throw CustomBadRequestException("Community can not be joined.")
+        if (!community.canBeJoined) throw CustomBadRequestException(message = "Community can not be joined.")
         UserCommunityJoinRequest(
             userUuid,
             communityUuid
@@ -97,7 +97,8 @@ class CommunityService {
 
     fun leaveCommunity(userUuid: UUID, communityUuid: UUID) {
         getCommunity(communityUuid) ?: throw EntityNotFoundException("No community for UUID: $communityUuid")
-        val relation = UserCommunityRelation.find("userUuid = ?1 AND communityUuid = ?2", userUuid, communityUuid).firstResult() ?: throw CustomBadRequestException("Not a member of community: $communityUuid")
+        val relation = UserCommunityRelation.find("userUuid = ?1 AND communityUuid = ?2", userUuid, communityUuid).firstResult()
+            ?: throw CustomBadRequestException(message = "Not a member of community: $communityUuid")
         relation.delete()
     }
 
@@ -128,7 +129,7 @@ class CommunityService {
             .find("communityUuid = ?1 AND userUuid IN ?2", communityUuid, userUuids)
             .list()
         val userUuidsWithMissingRequests = userUuids.filter { userUuid -> !requests.map { it.userUuid }.contains(userUuid) }
-        if (userUuidsWithMissingRequests.isNotEmpty()) throw CustomBadRequestException("No requests found for users: $userUuidsWithMissingRequests")
+        if (userUuidsWithMissingRequests.isNotEmpty()) throw CustomBadRequestException(message = "No requests found for users: $userUuidsWithMissingRequests")
         return requests
     }
 }

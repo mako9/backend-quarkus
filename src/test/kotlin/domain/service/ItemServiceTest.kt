@@ -2,13 +2,12 @@ package domain.service
 
 import common.ItemCategory
 import common.PageConfig
+import domain.model.ItemBookingModel
 import domain.model.ItemModel
+import domain.model.TimeIntervalModel
 import domain.model.exception.CustomForbiddenException
 import domain.model.sort.ItemSortBy
-import infrastructure.entity.Community
-import infrastructure.entity.Item
-import infrastructure.entity.ItemImage
-import infrastructure.entity.User
+import infrastructure.entity.*
 import io.quarkus.panache.common.Sort
 import io.quarkus.test.junit.QuarkusTest
 import org.eclipse.microprofile.config.inject.ConfigProperty
@@ -22,6 +21,7 @@ import testUtils.mock.FileUploadMock
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Paths
+import java.time.OffsetDateTime
 import java.util.*
 import javax.inject.Inject
 import kotlin.io.path.Path
@@ -30,8 +30,10 @@ import kotlin.io.path.Path
 class ItemServiceTest {
     @ConfigProperty(name = "app.storage.item-image.path")
     private lateinit var imagePath: String
+
     @Inject
     private lateinit var entityUtil: EntityUtil
+
     @Inject
     private lateinit var itemService: ItemService
 
@@ -136,7 +138,7 @@ class ItemServiceTest {
             listOf(ItemCategory.TOOL, ItemCategory.ELECTRIC_DEVICE),
             communityUuid = community.uuid,
             userUuid = user.uuid,
-            availability = "[{day: 0, start: 60, end 1800}]",
+            availability = listOf(TimeIntervalModel(1, 3, 60, 180)),
             description = "test"
         )
         val result = itemService.insertItem(itemModel)
@@ -246,5 +248,19 @@ class ItemServiceTest {
         }
 
         assertNotNull(ItemImage.find("uuid", storedItemImage.uuid).firstResult())
+    }
+
+    @Test
+    fun `when booking item, then item booking is created`() {
+        val itemBookingModel = itemService.bookItem(
+            itemOne.uuid,
+            itemOne.userUuid,
+            OffsetDateTime.now(),
+            OffsetDateTime.now().plusDays(2)
+        )
+
+        val storedItemBooking = ItemBooking.find("uuid", itemBookingModel.uuid).firstResult()
+
+        assertEquals(itemBookingModel, ItemBookingModel(storedItemBooking!!))
     }
 }

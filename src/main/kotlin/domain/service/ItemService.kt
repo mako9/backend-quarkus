@@ -1,11 +1,18 @@
 package domain.service
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import common.PageConfig
+import domain.model.ItemBookingModel
 import domain.model.ItemModel
 import domain.model.PageModel
+import domain.model.containsDates
+import domain.model.exception.CustomBadRequestException
 import domain.model.exception.CustomForbiddenException
+import domain.model.exception.ErrorCode
+import domain.model.sort.ItemBookingSortBy
 import domain.model.sort.ItemSortBy
 import infrastructure.entity.Item
+import infrastructure.entity.ItemBooking
 import infrastructure.entity.ItemImage
 import io.quarkus.panache.common.Page
 import io.quarkus.panache.common.Sort
@@ -19,6 +26,7 @@ import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.util.*
 import javax.enterprise.context.ApplicationScoped
+import javax.inject.Inject
 import javax.persistence.EntityNotFoundException
 import javax.transaction.Transactional
 import kotlin.io.path.Path
@@ -30,16 +38,35 @@ class ItemService {
     @ConfigProperty(name = "app.storage.item-image.path")
     private lateinit var imagePath: String
 
-    fun getItemsPageOfCommunities(communityUuids: List<UUID>, userUuid: UUID, pageConfig: PageConfig, sortBy: ItemSortBy?, sortDirection: Sort.Direction?): PageModel<ItemModel> {
+    @Inject
+    lateinit var objectMapper: ObjectMapper
+
+    fun getItemsPageOfCommunities(
+        communityUuids: List<UUID>,
+        userUuid: UUID,
+        pageConfig: PageConfig,
+        sortBy: ItemSortBy?,
+        sortDirection: Sort.Direction?
+    ): PageModel<ItemModel> {
         val sortByValue = sortBy?.name ?: ItemSortBy.NAME.name
         val sortDirectionValue = sortDirection ?: Sort.Direction.Ascending
         val query = Item
-            .find("communityUuid IN ?1 AND userUuid <> ?2", sort = Sort.by(sortByValue, sortDirectionValue), communityUuids, userUuid)
+            .find(
+                "communityUuid IN ?1 AND userUuid <> ?2",
+                sort = Sort.by(sortByValue, sortDirectionValue),
+                communityUuids,
+                userUuid
+            )
             .page(Page.of(pageConfig.pageNumber, pageConfig.pageSize))
         return PageModel.of(query, ::ItemModel)
     }
 
-    fun getItemsPageOfUser(userUuid: UUID, pageConfig: PageConfig, sortBy: ItemSortBy?, sortDirection: Sort.Direction?): PageModel<ItemModel> {
+    fun getItemsPageOfUser(
+        userUuid: UUID,
+        pageConfig: PageConfig,
+        sortBy: ItemSortBy?,
+        sortDirection: Sort.Direction?
+    ): PageModel<ItemModel> {
         val sortByValue = sortBy?.name ?: ItemSortBy.NAME.name
         val sortDirectionValue = sortDirection ?: Sort.Direction.Ascending
         val query = Item
@@ -70,7 +97,7 @@ class ItemService {
         item.city = itemModel.city
         item.communityUuid = itemModel.communityUuid
         item.isActive = itemModel.isActive
-        item.availability = itemModel.availability
+        item.availability = ObjectMapper().writeValueAsString(itemModel.availability)
         item.description = itemModel.description
         item.updatedAt = OffsetDateTime.now()
         item.persist()
@@ -116,6 +143,65 @@ class ItemService {
         itemImage.delete()
     }
 
+    fun getItemBookingsPageOfUser(
+        userUuid: UUID,
+        pageConfig: PageConfig,
+        sortBy: ItemBookingSortBy?,
+        sortDirection: Sort.Direction?
+    ): PageModel<ItemBookingModel> {
+        val sortByValue = sortBy?.name ?: ItemBookingSortBy.END_AT.name
+        val sortDirectionValue = sortDirection ?: Sort.Direction.Descending
+        val query = ItemBooking
+            .find("userUuid", sort = Sort.by(sortByValue, sortDirectionValue), userUuid)
+            .page(Page.of(pageConfig.pageNumber, pageConfig.pageSize))
+        return PageModel.of(query, ::ItemBookingModel)
+    }
+
+    fun getItemBookingsPageOfItem(
+        userUuid: UUID,
+        itemUuid: UUID,
+        pageConfig: PageConfig,
+        sortBy: ItemBookingSortBy?,
+        sortDirection: Sort.Direction?
+    ): PageModel<ItemBookingModel> {
+        val sortByValue = sortBy?.name ?: ItemBookingSortBy.END_AT.name
+        val sortDirectionValue = sortDirection ?: Sort.Direction.Descending
+        val query = ItemBooking
+            .find(
+                "userUuid = ?1 AND itemUuid = ?2",
+                sort = Sort.by(sortByValue, sortDirectionValue),
+                userUuid,
+                itemUuid
+            )
+            .page(Page.of(pageConfig.pageNumber, pageConfig.pageSize))
+        return PageModel.of(query, ::ItemBookingModel)
+    }
+
+    fun getItemBooking(
+        userUuid: UUID,
+        uuid: UUID
+    ): ItemBookingModel {
+        val itemBooking = ItemBooking
+            .find("uuid", uuid)
+            .firstResult() ?: throw EntityNotFoundException("No item booking for UUID: $uuid")
+        if (itemBooking.userUuid != userUuid) throw CustomForbiddenException("User not allowed to see item booking")
+        return ItemBookingModel(itemBooking)
+    }
+
+    fun bookItem(itemUuid: UUID, userUuid: UUID, startAt: OffsetDateTime, endAt: OffsetDateTime): ItemBookingModel {
+        val item = getItemByUuid(itemUuid) ?: throw EntityNotFoundException("No item for UUID: $itemUuid")
+        if (item.userUuid == userUuid) throw CustomBadRequestException(message = "Can not book owned item")
+        checkTimeAvailability(item, startAt, endAt)
+        val itemBooking = ItemBooking(
+            itemUuid = itemUuid,
+            userUuid = userUuid,
+            startAt = startAt,
+            endAt = endAt
+        )
+        itemBooking.persist()
+        return ItemBookingModel(itemBooking)
+    }
+
     private fun getItemByUuid(uuid: UUID): Item? {
         return Item.find("uuid", uuid).firstResult()
     }
@@ -135,5 +221,18 @@ class ItemService {
         val dateTime = LocalDate.now().toString()
         val imageName = "${itemUuid}_${dateTime}_${UUID.randomUUID()}.${extension}"
         return Paths.get("${imagePath}/${imageName}")
+    }
+
+    private fun checkTimeAvailability(item: Item, startAt: OffsetDateTime, endAt: OffsetDateTime) {
+        if (endAt <= startAt) throw CustomBadRequestException(
+            code = ErrorCode.InvalidInputParam,
+            message = "End of booking must be after start of booking: $endAt <= $startAt"
+        )
+
+        val itemModel = ItemModel(item)
+        if (!itemModel.availability.containsDates(startAt, endAt)) throw CustomBadRequestException(
+            code = ErrorCode.InvalidInputParam,
+            message = "The requested booking interval is outside availability intervals"
+        )
     }
 }

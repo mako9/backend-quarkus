@@ -96,3 +96,15 @@ CREATE TABLE "item_image" (
     CONSTRAINT "fc_item_image__item_uuid" FOREIGN KEY (item_uuid) REFERENCES item(uuid)
 );
 --rollback DROP TABLE item_image;
+
+CREATE TABLE "item_booking" (
+    uuid CHAR(36) PRIMARY KEY NOT NULL,
+    item_uuid CHAR(36) NOT NULL,
+    user_uuid CHAR(36) NOT NULL,
+    start_at TIMESTAMPTZ NOT NULL,
+    end_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT "fc_item_booking__item_uuid" FOREIGN KEY (item_uuid) REFERENCES item(uuid),
+    CONSTRAINT "fc_item_booking__user_uuid" FOREIGN KEY (user_uuid) REFERENCES "user"(uuid)
+);
+--rollback DROP TABLE item_booking;

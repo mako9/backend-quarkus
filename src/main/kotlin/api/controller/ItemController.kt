@@ -3,6 +3,7 @@ package api.controller
 import api.dto.*
 import common.PageConfig
 import domain.model.ItemModel
+import domain.model.sort.ItemBookingSortBy
 import domain.model.sort.ItemSortBy
 import domain.service.CommunityService
 import domain.service.ItemService
@@ -33,10 +34,13 @@ import javax.ws.rs.core.Response
 class ItemController {
     @Inject
     lateinit var itemService: ItemService
+
     @Inject
     lateinit var communityService: CommunityService
+
     @Inject
     lateinit var userService: UserService
+
     @Inject
     lateinit var jwt: JsonWebToken
 
@@ -49,7 +53,8 @@ class ItemController {
         @QueryParam("sortDirection") sortDirection: Sort.Direction?,
     ): PageDto<ItemDto> {
         val userUuid = getUserUuid()
-        val itemModelsPage = itemService.getItemsPageOfUser(userUuid, PageConfig(pageNumber, pageSize), sortBy, sortDirection)
+        val itemModelsPage =
+            itemService.getItemsPageOfUser(userUuid, PageConfig(pageNumber, pageSize), sortBy, sortDirection)
         return PageDto.of(itemModelsPage, ::ItemDto)
     }
 
@@ -64,7 +69,13 @@ class ItemController {
         val userUuid = getUserUuid()
         val communityPage = communityService.getCommunitiesPageByUser(userUuid, PageConfig(pageSize = 1000), null, null)
         val communityUuids = communityPage.content.map { it.uuid }
-        val itemModelsPage = itemService.getItemsPageOfCommunities(communityUuids, userUuid, PageConfig(pageNumber, pageSize), sortBy, sortDirection)
+        val itemModelsPage = itemService.getItemsPageOfCommunities(
+            communityUuids,
+            userUuid,
+            PageConfig(pageNumber, pageSize),
+            sortBy,
+            sortDirection
+        )
         return PageDto.of(itemModelsPage, ::ItemDto)
     }
 
@@ -96,7 +107,7 @@ class ItemController {
             itemRequestDto.communityUuid,
             userUuid,
             itemRequestDto.isActive,
-            availability = itemRequestDto.availability,
+            availability = itemRequestDto.availability.map { it.toTimeIntervalModel() },
             availableUntil = itemRequestDto.availableUntil,
             description = itemRequestDto.description
         )
@@ -124,7 +135,7 @@ class ItemController {
             itemRequestDto.communityUuid,
             userUuid,
             itemRequestDto.isActive,
-            availability = itemRequestDto.availability,
+            availability = itemRequestDto.availability.map { it.toTimeIntervalModel() },
             availableUntil = itemRequestDto.availableUntil,
             description = itemRequestDto.description
         )
@@ -155,13 +166,16 @@ class ItemController {
     @Path("/{uuid}/image")
     @Consumes(MediaType.MULTIPART_FORM_DATA)
     @ResponseStatus(HttpStatus.SC_CREATED)
-    @RequestBody(content = [Content(mediaType = MediaType.MULTIPART_FORM_DATA,
-        schema = Schema(implementation = MultipartDto::class))]
+    @RequestBody(
+        content = [Content(
+            mediaType = MediaType.MULTIPART_FORM_DATA,
+            schema = Schema(implementation = MultipartDto::class)
+        )]
     )
     fun uploadImages(
         @RestPath uuid: UUID,
         @MultipartForm multipartDto: MultipartDto
-    ): Response? {
+    ): Response {
         val imageUuid = itemService.saveItemImage(uuid, multipartDto.file, getUserUuid())
 
         return Response.created(URI.create("/image/${imageUuid}")).build()
@@ -190,13 +204,79 @@ class ItemController {
         return Response.noContent().build()
     }
 
+    @GET
+    @Path("/booking/my")
+    fun getMyItemBookings(
+        @QueryParam("pageNumber") @Min(0) pageNumber: Int?,
+        @QueryParam("pageSize") @Range(min = 1, max = 100) pageSize: Int?,
+        @QueryParam("sortBy") sortBy: ItemBookingSortBy?,
+        @QueryParam("sortDirection") sortDirection: Sort.Direction?,
+    ): PageDto<ItemBookingDto> {
+        val userUuid = getUserUuid()
+        val itemBookingsPage = itemService.getItemBookingsPageOfUser(
+            userUuid,
+            PageConfig(pageNumber, pageSize),
+            sortBy,
+            sortDirection
+        )
+        return PageDto.of(itemBookingsPage, ::ItemBookingDto)
+    }
+
+    @GET
+    @Path("/{uuid}/booking")
+    fun getItemBookingsOfItem(
+        @RestPath uuid: UUID,
+        @QueryParam("pageNumber") @Min(0) pageNumber: Int?,
+        @QueryParam("pageSize") @Range(min = 1, max = 100) pageSize: Int?,
+        @QueryParam("sortBy") sortBy: ItemBookingSortBy?,
+        @QueryParam("sortDirection") sortDirection: Sort.Direction?,
+    ): PageDto<ItemBookingDto> {
+        val userUuid = getUserUuid()
+        val itemBookingsPage = itemService.getItemBookingsPageOfItem(
+            userUuid,
+            uuid,
+            PageConfig(pageNumber, pageSize),
+            sortBy,
+            sortDirection
+        )
+        return PageDto.of(itemBookingsPage, ::ItemBookingDto)
+    }
+
+    @GET
+    @Path("/booking/{uuid}")
+    fun getItemBooking(
+        @RestPath uuid: UUID
+    ): ItemBookingDto {
+        val userUuid = getUserUuid()
+        val itemBookingModel = itemService.getItemBooking(userUuid, uuid)
+        return ItemBookingDto(itemBookingModel)
+    }
+
+    @POST
+    @ResponseStatus(HttpStatus.SC_CREATED)
+    @Path("/{uuid}")
+    fun bookItem(
+        @RestPath uuid: UUID,
+        itemBookingRequestDto: ItemBookingRequestDto
+    ): Response {
+        val userUuid = getUserUuid()
+
+        val itemBookingModel = itemService.bookItem(
+            itemUuid = uuid,
+            userUuid = userUuid,
+            startAt = itemBookingRequestDto.startAt,
+            endAt = itemBookingRequestDto.endAt
+        )
+        return Response.created(URI.create("/booking/${itemBookingModel.uuid}")).build()
+    }
+
     private fun getUserUuid(): UUID {
         val mail = jwt.getClaim<String>(Claims.email)
         val userModel = userService.getUserByMail(mail) ?: throw NotFoundException("No user for mail $mail")
         return userModel.uuid
     }
 
-    private fun checkCommunity(communityUuid: UUID)  {
+    private fun checkCommunity(communityUuid: UUID) {
         communityService.getCommunityModel(communityUuid)
             ?: throw NotFoundException("No community found for UUID: $communityUuid")
     }
