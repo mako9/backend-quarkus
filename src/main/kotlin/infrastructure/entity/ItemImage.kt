@@ -3,7 +3,8 @@ package infrastructure.entity
 import io.quarkus.hibernate.orm.panache.kotlin.PanacheCompanion
 import io.quarkus.hibernate.orm.panache.kotlin.PanacheEntityBase
 import jakarta.persistence.*
-import org.hibernate.annotations.UuidGenerator
+import org.hibernate.annotations.JdbcTypeCode
+import org.hibernate.type.SqlTypes.VARCHAR
 import java.time.OffsetDateTime
 import java.util.*
 
@@ -16,11 +17,10 @@ class ItemImage : PanacheEntityBase {
 
     @Column
     @Id
-    @UuidGenerator
+    @JdbcTypeCode(VARCHAR)
     var uuid: UUID = UUID.randomUUID()
 
     @Column(name = "item_uuid")
-    @UuidGenerator
     lateinit var itemUuid: UUID
 
     @Column

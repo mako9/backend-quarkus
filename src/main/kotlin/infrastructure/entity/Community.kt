@@ -6,7 +6,8 @@ import jakarta.persistence.Cacheable
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.Id
-import org.hibernate.annotations.UuidGenerator
+import org.hibernate.annotations.JdbcTypeCode
+import org.hibernate.type.SqlTypes.VARCHAR
 import java.time.OffsetDateTime
 import java.util.*
 
@@ -28,7 +29,7 @@ class Community : PanacheEntityBase {
 
     @Column
     @Id
-    @UuidGenerator
+    @JdbcTypeCode(VARCHAR)
     lateinit var uuid: UUID
 
     @Column(length = 100, name = "name")
@@ -47,7 +48,7 @@ class Community : PanacheEntityBase {
     var city: String? = null
 
     @Column(name = "admin_uuid")
-    @UuidGenerator
+    @JdbcTypeCode(VARCHAR)
     lateinit var adminUuid: UUID
 
     @Column

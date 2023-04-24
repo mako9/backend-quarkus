@@ -5,8 +5,9 @@ import common.ItemCategory
 import io.quarkus.hibernate.orm.panache.kotlin.PanacheCompanion
 import io.quarkus.hibernate.orm.panache.kotlin.PanacheEntityBase
 import jakarta.persistence.*
+import org.hibernate.annotations.JdbcTypeCode
 import org.hibernate.annotations.Type
-import org.hibernate.annotations.UuidGenerator
+import java.sql.Types.VARCHAR
 import java.time.OffsetDateTime
 import java.util.*
 
@@ -18,7 +19,6 @@ class Item : PanacheEntityBase {
 
     @Column
     @Id
-    @UuidGenerator
     lateinit var uuid: UUID
 
     @Column
@@ -42,11 +42,11 @@ class Item : PanacheEntityBase {
     var city: String? = null
 
     @Column(name = "community_uuid")
-    @UuidGenerator
+    @JdbcTypeCode(VARCHAR)
     lateinit var communityUuid: UUID
 
     @Column(name = "user_uuid")
-    @UuidGenerator
+    @JdbcTypeCode(VARCHAR)
     lateinit var userUuid: UUID
 
     @Column(name = "is_active")

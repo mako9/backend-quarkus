@@ -3,8 +3,9 @@ package infrastructure.entity
 import io.quarkus.hibernate.orm.panache.kotlin.PanacheCompanion
 import io.quarkus.hibernate.orm.panache.kotlin.PanacheEntityBase
 import jakarta.persistence.*
-import org.hibernate.annotations.UuidGenerator
+import org.hibernate.annotations.JdbcTypeCode
 import java.io.Serializable
+import java.sql.Types.VARCHAR
 import java.time.OffsetDateTime
 import java.util.*
 
@@ -17,12 +18,12 @@ class UserCommunityRelation : PanacheEntityBase {
 
     @Column(name = "user_uuid")
     @Id
-    @UuidGenerator
+    @JdbcTypeCode(VARCHAR)
     lateinit var userUuid: UUID
 
     @Column(name = "community_uuid")
     @Id
-    @UuidGenerator
+    @JdbcTypeCode(VARCHAR)
     lateinit var communityUuid: UUID
 
     @Column(name = "created_at")

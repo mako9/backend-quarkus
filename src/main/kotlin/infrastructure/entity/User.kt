@@ -1,12 +1,11 @@
 package infrastructure.entity
 
-import com.vladmihalcea.hibernate.type.array.EnumArrayType
 import common.UserRole
 import io.quarkus.hibernate.orm.panache.kotlin.PanacheCompanion
 import io.quarkus.hibernate.orm.panache.kotlin.PanacheEntityBase
 import jakarta.persistence.*
-import org.hibernate.annotations.Type
-import org.hibernate.annotations.UuidGenerator
+import org.hibernate.annotations.JdbcTypeCode
+import java.sql.Types.VARCHAR
 import java.time.OffsetDateTime
 import java.util.*
 
@@ -28,7 +27,7 @@ class User : PanacheEntityBase {
 
     @Column
     @Id
-    @UuidGenerator
+    @JdbcTypeCode(VARCHAR)
     lateinit var uuid: UUID
 
     @Column(length = 100, name = "first_name")
@@ -59,7 +58,7 @@ class User : PanacheEntityBase {
     lateinit var updatedAt: OffsetDateTime
 
     @Column
-    @Type(EnumArrayType::class)
+    @Enumerated(EnumType.STRING)
     lateinit var roles: Array<UserRole>
 
     constructor(
