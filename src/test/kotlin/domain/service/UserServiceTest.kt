@@ -3,18 +3,19 @@ package domain.service
 import common.PageConfig
 import domain.model.UserModel
 import io.quarkus.test.junit.QuarkusTest
+import jakarta.inject.Inject
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 import testUtils.EntityUtil
 import java.util.*
-import javax.inject.Inject
 
 @QuarkusTest
 class UserServiceTest {
     @Inject
     private lateinit var entityUtil: EntityUtil
+
     @Inject
     private lateinit var userService: UserService
 

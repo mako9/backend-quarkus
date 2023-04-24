@@ -16,13 +16,13 @@ import io.quarkus.test.junit.QuarkusTest
 import io.quarkus.test.keycloak.client.KeycloakTestClient
 import io.restassured.RestAssured
 import io.restassured.http.ContentType
+import jakarta.inject.Inject
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import testUtils.EntityUtil
 import java.util.*
-import javax.inject.Inject
 
 @QuarkusTest
 class CommunityControllerTest {
@@ -67,7 +67,8 @@ class CommunityControllerTest {
                 CommunityDto(CommunityModel(communityOne)),
                 CommunityDto(CommunityModel(communityTwo))
             ),
-            jsonPath.getList("content", CommunityDto::class.java))
+            jsonPath.getList("content", CommunityDto::class.java)
+        )
     }
 
     @Test
@@ -97,7 +98,8 @@ class CommunityControllerTest {
             listOf(
                 CommunityDto(CommunityModel(communityTwo))
             ),
-            jsonPath.getList("content", CommunityDto::class.java))
+            jsonPath.getList("content", CommunityDto::class.java)
+        )
     }
 
     @Test
@@ -121,7 +123,8 @@ class CommunityControllerTest {
                 CommunityDto(CommunityModel(communityTwo)),
                 CommunityDto(CommunityModel(communityOne))
             ),
-            jsonPath.getList("content", CommunityDto::class.java))
+            jsonPath.getList("content", CommunityDto::class.java)
+        )
     }
 
     @Test
@@ -142,7 +145,8 @@ class CommunityControllerTest {
             listOf(
                 CommunityDto(CommunityModel(communityOne))
             ),
-            jsonPath.getList("content", CommunityDto::class.java))
+            jsonPath.getList("content", CommunityDto::class.java)
+        )
     }
 
     @Test
@@ -163,7 +167,8 @@ class CommunityControllerTest {
             listOf(
                 CommunityDto(CommunityModel(communityOne))
             ),
-            jsonPath.getList("content", CommunityDto::class.java))
+            jsonPath.getList("content", CommunityDto::class.java)
+        )
     }
 
     @Test
@@ -312,7 +317,8 @@ class CommunityControllerTest {
                 MinimalUserDto(UserModel(userOne)),
                 MinimalUserDto(UserModel(userTwo))
             ),
-            jsonPath.getList("content", MinimalUserDto::class.java))
+            jsonPath.getList("content", MinimalUserDto::class.java)
+        )
     }
 
     @Test
@@ -387,7 +393,8 @@ class CommunityControllerTest {
             listOf(
                 MinimalUserDto(UserModel(userOne))
             ),
-            jsonPath.getList("", MinimalUserDto::class.java))
+            jsonPath.getList("", MinimalUserDto::class.java)
+        )
     }
 
     @Test
@@ -479,7 +486,8 @@ class CommunityControllerTest {
                 ItemDto(ItemModel(Item.find("uuid", itemOne.uuid).singleResult())),
                 ItemDto(ItemModel(Item.find("uuid", itemTwo.uuid).singleResult()))
             ),
-            jsonPath.getList("content", ItemDto::class.java))
+            jsonPath.getList("content", ItemDto::class.java)
+        )
     }
 
 
