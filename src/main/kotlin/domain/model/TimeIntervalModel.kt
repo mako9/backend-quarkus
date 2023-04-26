@@ -1,6 +1,7 @@
 package domain.model
 
 import com.fasterxml.jackson.annotation.JsonCreator
+import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.ObjectMapper
 import utils.DateTimeUtils
@@ -8,24 +9,29 @@ import java.time.*
 import java.time.temporal.TemporalAdjusters.nextOrSame
 
 data class TimeIntervalModel @JsonCreator constructor(
-    @JsonProperty("startDayOfWeek") private val startDayOfWeekInt: Int,
-    @JsonProperty("endDayOfWeek") private val endDayOfWeekInt: Int,
-    @JsonProperty("startTimeAtInMinute") private val startTimeAtInMinute: Int,
-    @JsonProperty("endTimeAtInMinute") private val endTimeAtInMinute: Int
+    @JsonProperty("startDayOfWeek") val startDayOfWeekInt: Int,
+    @JsonProperty("endDayOfWeek") val endDayOfWeekInt: Int,
+    @JsonProperty("startTimeAtInMinute") val startTimeAtInMinute: Int,
+    @JsonProperty("endTimeAtInMinute") val endTimeAtInMinute: Int
 ) {
 
+    @get:JsonIgnore
     val startDayOfWeek: DayOfWeek
         get() = DayOfWeek.of(startDayOfWeekInt)
 
+    @get:JsonIgnore
     val endDayOfWeek: DayOfWeek
         get() = DayOfWeek.of(endDayOfWeekInt)
 
+    @get:JsonIgnore
     val startTime: OffsetTime
         get() = DateTimeUtils.getOffsetTimeOfMinutes(startTimeAtInMinute)
 
+    @get:JsonIgnore
     val endTime: OffsetTime
         get() = DateTimeUtils.getOffsetTimeOfMinutes(endTimeAtInMinute)
 
+    @JsonIgnore
     constructor(startDateTime: OffsetDateTime, endDateTime: OffsetDateTime) : this(
         startDayOfWeekInt = startDateTime.dayOfWeek.value,
         endDayOfWeekInt = endDateTime.dayOfWeek.value,

@@ -15,6 +15,7 @@ class EntityUtil {
         UserCommunityRelation.deleteAll()
         UserCommunityJoinRequest.deleteAll()
         ItemImage.deleteAll()
+        ItemBooking.deleteAll()
         Item.deleteAll()
         Community.deleteAll()
         User.deleteAll()

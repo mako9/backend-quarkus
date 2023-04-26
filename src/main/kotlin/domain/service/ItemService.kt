@@ -230,7 +230,11 @@ class ItemService {
         )
 
         val itemModel = ItemModel(item)
-        if (!itemModel.availability.containsDates(startAt, endAt)) throw CustomBadRequestException(
+        if (itemModel.availability.isNotEmpty() && !itemModel.availability.containsDates(
+                startAt,
+                endAt
+            )
+        ) throw CustomBadRequestException(
             code = ErrorCode.InvalidInputParam,
             message = "The requested booking interval is outside availability intervals"
         )

@@ -252,9 +252,10 @@ class ItemServiceTest {
 
     @Test
     fun `when booking item, then item booking is created`() {
+        val requestingUser = entityUtil.setupUser()
         val itemBookingModel = itemService.bookItem(
             itemOne.uuid,
-            itemOne.userUuid,
+            requestingUser.uuid,
             OffsetDateTime.now(),
             OffsetDateTime.now().plusDays(2)
         )
