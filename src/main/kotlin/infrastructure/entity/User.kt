@@ -1,11 +1,15 @@
 package infrastructure.entity
 
+import com.vladmihalcea.hibernate.type.array.EnumArrayType
+import com.vladmihalcea.hibernate.type.array.internal.AbstractArrayType
 import common.UserRole
 import io.quarkus.hibernate.orm.panache.kotlin.PanacheCompanion
 import io.quarkus.hibernate.orm.panache.kotlin.PanacheEntityBase
 import jakarta.persistence.*
 import org.hibernate.annotations.JdbcTypeCode
-import java.sql.Types.VARCHAR
+import org.hibernate.annotations.Parameter
+import org.hibernate.annotations.Type
+import java.sql.Types.CHAR
 import java.time.OffsetDateTime
 import java.util.*
 
@@ -27,7 +31,8 @@ class User : PanacheEntityBase {
 
     @Column
     @Id
-    @JdbcTypeCode(VARCHAR)
+    @Basic
+    @JdbcTypeCode(CHAR)
     lateinit var uuid: UUID
 
     @Column(length = 100, name = "first_name")
@@ -58,7 +63,10 @@ class User : PanacheEntityBase {
     lateinit var updatedAt: OffsetDateTime
 
     @Column
-    @Enumerated(EnumType.STRING)
+    @Type(
+        value = EnumArrayType::class,
+        parameters = [Parameter(value = "user_role", name = AbstractArrayType.SQL_ARRAY_TYPE)]
+    )
     lateinit var roles: Array<UserRole>
 
     constructor(

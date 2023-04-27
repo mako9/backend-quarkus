@@ -36,7 +36,7 @@ class ItemService {
         sortBy: ItemSortBy?,
         sortDirection: Sort.Direction?
     ): PageModel<ItemModel> {
-        val sortByValue = sortBy?.name ?: ItemSortBy.NAME.name
+        val sortByValue = sortBy?.getValue() ?: ItemSortBy.NAME.getValue()
         val sortDirectionValue = sortDirection ?: Sort.Direction.Ascending
         val query = Item
             .find(
@@ -55,7 +55,7 @@ class ItemService {
         sortBy: ItemSortBy?,
         sortDirection: Sort.Direction?
     ): PageModel<ItemModel> {
-        val sortByValue = sortBy?.name ?: ItemSortBy.NAME.name
+        val sortByValue = sortBy?.getValue() ?: ItemSortBy.NAME.getValue()
         val sortDirectionValue = sortDirection ?: Sort.Direction.Ascending
         val query = Item
             .find("userUuid", sort = Sort.by(sortByValue, sortDirectionValue), userUuid)

@@ -25,10 +25,14 @@ class CommunityService {
         sortBy: CommunitySortBy?,
         sortDirection: Sort.Direction?
     ): PageModel<CommunityModel> {
-        val sortByValue = sortBy?.name ?: CommunitySortBy.NAME.name
+        val sortByValue = sortBy?.getValue() ?: CommunitySortBy.NAME.getValue()
         val sortDirectionValue = sortDirection ?: Sort.Direction.Ascending
         val query = Community
-            .find(query = Community.queryAllByNotUserUuid, sort = Sort.by(sortByValue, sortDirectionValue), userUuid)
+            .find(
+                query = Community.queryAllByNotUserUuid,
+                sort = Sort.by(sortByValue, sortDirectionValue),
+                userUuid
+            )
             .page(Page.of(pageConfig.pageNumber, pageConfig.pageSize))
         return PageModel.of(query, ::CommunityModel)
     }
@@ -39,10 +43,14 @@ class CommunityService {
         sortBy: CommunitySortBy?,
         sortDirection: Sort.Direction?
     ): PageModel<CommunityModel> {
-        val sortByValue = sortBy?.name ?: CommunitySortBy.NAME.name
+        val sortByValue = sortBy?.getValue() ?: CommunitySortBy.NAME.getValue()
         val sortDirectionValue = sortDirection ?: Sort.Direction.Ascending
         val query = Community
-            .find(query = Community.queryAllByUserUuid, sort = Sort.by(sortByValue, sortDirectionValue), userUuid)
+            .find(
+                query = Community.queryAllByUserUuid,
+                sort = Sort.by(sortByValue, sortDirectionValue),
+                userUuid
+            )
             .page(Page.of(pageConfig.pageNumber, pageConfig.pageSize))
         return PageModel.of(query, ::CommunityModel)
     }
@@ -53,7 +61,7 @@ class CommunityService {
         sortBy: CommunitySortBy?,
         sortDirection: Sort.Direction?
     ): PageModel<CommunityModel> {
-        val sortByValue = sortBy?.name ?: CommunitySortBy.NAME.name
+        val sortByValue = sortBy?.getValue() ?: CommunitySortBy.NAME.getValue()
         val sortDirectionValue = sortDirection ?: Sort.Direction.Ascending
         val query = Community
             .find(query = "adminUuid", Sort.by(sortByValue, sortDirectionValue), adminUuid)

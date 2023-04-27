@@ -1,6 +1,6 @@
 package domain.model.sort
 
-enum class ItemSortBy {
+enum class ItemSortBy : SortBy {
     NAME,
     CITY
 }

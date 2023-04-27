@@ -2,12 +2,9 @@ package infrastructure.entity
 
 import io.quarkus.hibernate.orm.panache.kotlin.PanacheCompanion
 import io.quarkus.hibernate.orm.panache.kotlin.PanacheEntityBase
-import jakarta.persistence.Cacheable
-import jakarta.persistence.Column
-import jakarta.persistence.Entity
-import jakarta.persistence.Id
+import jakarta.persistence.*
 import org.hibernate.annotations.JdbcTypeCode
-import org.hibernate.type.SqlTypes.VARCHAR
+import org.hibernate.type.SqlTypes.CHAR
 import java.time.OffsetDateTime
 import java.util.*
 
@@ -29,26 +26,28 @@ class Community : PanacheEntityBase {
 
     @Column
     @Id
-    @JdbcTypeCode(VARCHAR)
+    @Basic
+    @JdbcTypeCode(CHAR)
     lateinit var uuid: UUID
 
-    @Column(length = 100, name = "name")
+    @Column(length = 100)
     lateinit var name: String
 
     @Column(length = 100)
     var street: String? = null
 
-    @Column(length = 10, name = "house_number")
+    @Column(name = "house_number")
     var houseNumber: String? = null
 
-    @Column(length = 5, name = "postal_code")
+    @Column(name = "postal_code", length = 5)
     var postalCode: String? = null
 
     @Column(length = 100)
     var city: String? = null
 
     @Column(name = "admin_uuid")
-    @JdbcTypeCode(VARCHAR)
+    @Basic
+    @JdbcTypeCode(CHAR)
     lateinit var adminUuid: UUID
 
     @Column

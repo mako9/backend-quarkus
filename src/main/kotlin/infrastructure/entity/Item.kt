@@ -1,13 +1,16 @@
 package infrastructure.entity
 
 import com.vladmihalcea.hibernate.type.array.EnumArrayType
+import com.vladmihalcea.hibernate.type.array.internal.AbstractArrayType
 import common.ItemCategory
 import io.quarkus.hibernate.orm.panache.kotlin.PanacheCompanion
 import io.quarkus.hibernate.orm.panache.kotlin.PanacheEntityBase
 import jakarta.persistence.*
 import org.hibernate.annotations.JdbcTypeCode
+import org.hibernate.annotations.Parameter
 import org.hibernate.annotations.Type
-import java.sql.Types.VARCHAR
+import org.hibernate.type.SqlTypes
+import java.sql.Types.CHAR
 import java.time.OffsetDateTime
 import java.util.*
 
@@ -19,14 +22,18 @@ class Item : PanacheEntityBase {
 
     @Column
     @Id
+    @Basic
+    @JdbcTypeCode(SqlTypes.CHAR)
     lateinit var uuid: UUID
 
     @Column
     lateinit var name: String
 
     @Column
-    @Enumerated(EnumType.STRING)
-    @Type(EnumArrayType::class)
+    @Type(
+        value = EnumArrayType::class,
+        parameters = [Parameter(value = "item_category", name = AbstractArrayType.SQL_ARRAY_TYPE)]
+    )
     lateinit var categories: Array<ItemCategory>
 
     @Column
@@ -42,11 +49,13 @@ class Item : PanacheEntityBase {
     var city: String? = null
 
     @Column(name = "community_uuid")
-    @JdbcTypeCode(VARCHAR)
+    @Basic
+    @JdbcTypeCode(CHAR)
     lateinit var communityUuid: UUID
 
     @Column(name = "user_uuid")
-    @JdbcTypeCode(VARCHAR)
+    @Basic
+    @JdbcTypeCode(CHAR)
     lateinit var userUuid: UUID
 
     @Column(name = "is_active")
