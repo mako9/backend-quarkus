@@ -9,6 +9,7 @@ import domain.model.sort.ItemSortBy
 import infrastructure.entity.*
 import io.quarkus.panache.common.Sort
 import io.quarkus.test.junit.QuarkusTest
+import io.quarkus.test.junit.TestProfile
 import jakarta.inject.Inject
 import org.eclipse.microprofile.config.inject.ConfigProperty
 import org.junit.jupiter.api.AfterEach
@@ -18,6 +19,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import testUtils.AssertUtil.assertOffsetDateTimeEquals
 import testUtils.EntityUtil
+import testUtils.UnitTestProfile
 import testUtils.mock.FileUploadMock
 import java.io.File
 import java.nio.file.Files
@@ -27,6 +29,7 @@ import java.util.*
 import kotlin.io.path.Path
 
 @QuarkusTest
+@TestProfile(UnitTestProfile::class)
 class ItemServiceTest {
     @ConfigProperty(name = "app.storage.item-image.path")
     private lateinit var imagePath: String

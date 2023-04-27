@@ -10,6 +10,7 @@ import infrastructure.entity.UserCommunityJoinRequest
 import infrastructure.entity.UserCommunityRelation
 import io.quarkus.panache.common.Sort
 import io.quarkus.test.junit.QuarkusTest
+import io.quarkus.test.junit.TestProfile
 import jakarta.inject.Inject
 import jakarta.persistence.EntityNotFoundException
 import org.junit.jupiter.api.AfterEach
@@ -18,9 +19,11 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import testUtils.EntityUtil
+import testUtils.UnitTestProfile
 import java.util.*
 
 @QuarkusTest
+@TestProfile(UnitTestProfile::class)
 class CommunityServiceTest {
     @Inject
     private lateinit var entityUtil: EntityUtil
