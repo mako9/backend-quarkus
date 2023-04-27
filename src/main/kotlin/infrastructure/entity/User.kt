@@ -1,38 +1,38 @@
 package infrastructure.entity
 
 import com.vladmihalcea.hibernate.type.array.EnumArrayType
+import com.vladmihalcea.hibernate.type.array.internal.AbstractArrayType
 import common.UserRole
 import io.quarkus.hibernate.orm.panache.kotlin.PanacheCompanion
 import io.quarkus.hibernate.orm.panache.kotlin.PanacheEntityBase
+import jakarta.persistence.*
+import org.hibernate.annotations.JdbcTypeCode
 import org.hibernate.annotations.Parameter
 import org.hibernate.annotations.Type
-import org.hibernate.annotations.TypeDef
+import java.sql.Types.CHAR
 import java.time.OffsetDateTime
 import java.util.*
-import javax.persistence.*
 
 @Entity
 @Table(name = "user", schema = "public")
 @Cacheable
-@TypeDef(name = "user_role_enum", typeClass = EnumArrayType::class,
-    defaultForType = Array<UserRole>::class,
-    parameters = [
-        Parameter(
-            name = EnumArrayType.SQL_ARRAY_TYPE,
-            value = "user_role"
-        )
-    ]
-    )
 @NamedQueries(
-    NamedQuery(name = "User.getByCommunityUuid", query = "select u from User u join UserCommunityRelation ucr on u.uuid = ucr.userUuid where ucr.communityUuid = :communityUuid order by u.lastName ASC"),
-    NamedQuery(name = "User.getWithRequestByCommunityUuid", query = "select u from User u join UserCommunityJoinRequest ucjr on u.uuid = ucjr.userUuid where ucjr.communityUuid = :communityUuid order by u.lastName ASC")
+    NamedQuery(
+        name = "User.getByCommunityUuid",
+        query = "select u from User u join UserCommunityRelation ucr on u.uuid = ucr.userUuid where ucr.communityUuid = :communityUuid order by u.lastName ASC"
+    ),
+    NamedQuery(
+        name = "User.getWithRequestByCommunityUuid",
+        query = "select u from User u join UserCommunityJoinRequest ucjr on u.uuid = ucjr.userUuid where ucjr.communityUuid = :communityUuid order by u.lastName ASC"
+    )
 )
 class User : PanacheEntityBase {
     companion object : PanacheCompanion<User>
 
     @Column
     @Id
-    @Type(type = "uuid-char")
+    @Basic
+    @JdbcTypeCode(CHAR)
     lateinit var uuid: UUID
 
     @Column(length = 100, name = "first_name")
@@ -63,7 +63,10 @@ class User : PanacheEntityBase {
     lateinit var updatedAt: OffsetDateTime
 
     @Column
-    @Type(type = "user_role_enum")
+    @Type(
+        value = EnumArrayType::class,
+        parameters = [Parameter(value = "user_role", name = AbstractArrayType.SQL_ARRAY_TYPE)]
+    )
     lateinit var roles: Array<UserRole>
 
     constructor(

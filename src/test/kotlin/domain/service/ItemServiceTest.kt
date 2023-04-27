@@ -2,7 +2,6 @@ package domain.service
 
 import common.ItemCategory
 import common.PageConfig
-import domain.model.ItemBookingModel
 import domain.model.ItemModel
 import domain.model.TimeIntervalModel
 import domain.model.exception.CustomForbiddenException
@@ -10,12 +9,14 @@ import domain.model.sort.ItemSortBy
 import infrastructure.entity.*
 import io.quarkus.panache.common.Sort
 import io.quarkus.test.junit.QuarkusTest
+import jakarta.inject.Inject
 import org.eclipse.microprofile.config.inject.ConfigProperty
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import testUtils.AssertUtil.assertOffsetDateTimeEquals
 import testUtils.EntityUtil
 import testUtils.mock.FileUploadMock
 import java.io.File
@@ -23,7 +24,6 @@ import java.nio.file.Files
 import java.nio.file.Paths
 import java.time.OffsetDateTime
 import java.util.*
-import javax.inject.Inject
 import kotlin.io.path.Path
 
 @QuarkusTest
@@ -262,6 +262,11 @@ class ItemServiceTest {
 
         val storedItemBooking = ItemBooking.find("uuid", itemBookingModel.uuid).firstResult()
 
-        assertEquals(itemBookingModel, ItemBookingModel(storedItemBooking!!))
+        assertEquals(itemBookingModel.uuid, storedItemBooking?.uuid)
+        assertEquals(itemBookingModel.userUuid, storedItemBooking?.userUuid)
+        assertEquals(itemBookingModel.itemUuid, storedItemBooking?.itemUuid)
+        assertOffsetDateTimeEquals(itemBookingModel.startAt, storedItemBooking?.startAt)
+        assertOffsetDateTimeEquals(itemBookingModel.endAt, storedItemBooking?.endAt)
+        assertOffsetDateTimeEquals(itemBookingModel.createdAt, storedItemBooking?.createdAt)
     }
 }

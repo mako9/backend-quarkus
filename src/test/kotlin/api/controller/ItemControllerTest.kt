@@ -12,6 +12,7 @@ import io.quarkus.test.junit.QuarkusTest
 import io.quarkus.test.keycloak.client.KeycloakTestClient
 import io.restassured.RestAssured
 import io.restassured.http.ContentType
+import jakarta.inject.Inject
 import org.eclipse.microprofile.config.inject.ConfigProperty
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
@@ -23,12 +24,12 @@ import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.*
-import javax.inject.Inject
 
 @QuarkusTest
 class ItemControllerTest {
     @ConfigProperty(name = "app.storage.item-image.path")
     private lateinit var imagePath: String
+
     @Inject
     private lateinit var entityUtil: EntityUtil
     private val keycloakClient = KeycloakTestClient()
@@ -52,8 +53,10 @@ class ItemControllerTest {
 
     @Test
     fun `when retrieving paginated items owned by requesting user with default pagination, then correct page is returned`() {
-        val itemOne = entityUtil.setupItem { it.name = "one"; it.communityUuid = community.uuid; it.userUuid = user.uuid }
-        val itemTwo = entityUtil.setupItem { it.name = "two"; it.communityUuid = community.uuid; it.userUuid = user.uuid }
+        val itemOne =
+            entityUtil.setupItem { it.name = "one"; it.communityUuid = community.uuid; it.userUuid = user.uuid }
+        val itemTwo =
+            entityUtil.setupItem { it.name = "two"; it.communityUuid = community.uuid; it.userUuid = user.uuid }
         val jsonPath = RestAssured.given().auth().oauth2(accessToken)
             .contentType(ContentType.JSON)
             .`when`()["/api/user/item/owned"]
@@ -74,7 +77,8 @@ class ItemControllerTest {
                 ItemDto(ItemModel(Item.find("uuid", itemOne.uuid).singleResult())),
                 ItemDto(ItemModel(Item.find("uuid", itemTwo.uuid).singleResult()))
             ),
-            jsonPath.getList("content", ItemDto::class.java))
+            jsonPath.getList("content", ItemDto::class.java)
+        )
     }
 
     @Test
@@ -89,7 +93,10 @@ class ItemControllerTest {
             .response()
             .jsonPath()
 
-        assertEquals(ItemDetailDto(ItemModel(Item.find("uuid", item.uuid).singleResult())), jsonPath.getObject("", ItemDetailDto::class.java))
+        assertEquals(
+            ItemDetailDto(ItemModel(Item.find("uuid", item.uuid).singleResult())),
+            jsonPath.getObject("", ItemDetailDto::class.java)
+        )
     }
 
     @Test
@@ -118,7 +125,8 @@ class ItemControllerTest {
                 ItemDto(ItemModel(Item.find("uuid", itemOne.uuid).singleResult())),
                 ItemDto(ItemModel(Item.find("uuid", itemTwo.uuid).singleResult()))
             ),
-            jsonPath.getList("content", ItemDto::class.java))
+            jsonPath.getList("content", ItemDto::class.java)
+        )
     }
 
     @Test

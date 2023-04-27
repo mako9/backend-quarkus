@@ -16,19 +16,18 @@ import infrastructure.entity.ItemBooking
 import infrastructure.entity.ItemImage
 import io.quarkus.panache.common.Page
 import io.quarkus.panache.common.Sort
+import jakarta.enterprise.context.ApplicationScoped
+import jakarta.inject.Inject
+import jakarta.persistence.EntityNotFoundException
+import jakarta.transaction.Transactional
 import org.eclipse.microprofile.config.inject.ConfigProperty
 import org.jboss.resteasy.reactive.multipart.FileUpload
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.util.*
-import javax.enterprise.context.ApplicationScoped
-import javax.inject.Inject
-import javax.persistence.EntityNotFoundException
-import javax.transaction.Transactional
 import kotlin.io.path.Path
 import kotlin.io.path.pathString
 
@@ -48,7 +47,7 @@ class ItemService {
         sortBy: ItemSortBy?,
         sortDirection: Sort.Direction?
     ): PageModel<ItemModel> {
-        val sortByValue = sortBy?.name ?: ItemSortBy.NAME.name
+        val sortByValue = sortBy?.getValue() ?: ItemSortBy.NAME.getValue()
         val sortDirectionValue = sortDirection ?: Sort.Direction.Ascending
         val query = Item
             .find(
@@ -67,7 +66,7 @@ class ItemService {
         sortBy: ItemSortBy?,
         sortDirection: Sort.Direction?
     ): PageModel<ItemModel> {
-        val sortByValue = sortBy?.name ?: ItemSortBy.NAME.name
+        val sortByValue = sortBy?.getValue() ?: ItemSortBy.NAME.getValue()
         val sortDirectionValue = sortDirection ?: Sort.Direction.Ascending
         val query = Item
             .find("userUuid", sort = Sort.by(sortByValue, sortDirectionValue), userUuid)
@@ -164,7 +163,7 @@ class ItemService {
         sortBy: ItemBookingSortBy?,
         sortDirection: Sort.Direction?
     ): PageModel<ItemBookingModel> {
-        val sortByValue = sortBy?.name ?: ItemBookingSortBy.END_AT.name
+        val sortByValue = sortBy?.getValue() ?: ItemBookingSortBy.END_AT.getValue()
         val sortDirectionValue = sortDirection ?: Sort.Direction.Descending
         val query = ItemBooking
             .find(
@@ -218,7 +217,7 @@ class ItemService {
 
     private fun createImagePath(itemUuid: UUID, fileName: String): Path {
         val extension = fileName.substringAfterLast(".")
-        val dateTime = LocalDate.now().toString()
+        val dateTime = OffsetDateTime.now().toString()
         val imageName = "${itemUuid}_${dateTime}_${UUID.randomUUID()}.${extension}"
         return Paths.get("${imagePath}/${imageName}")
     }

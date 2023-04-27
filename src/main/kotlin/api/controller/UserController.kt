@@ -5,17 +5,17 @@ import api.dto.UserPatchDto
 import common.UserRole
 import domain.service.UserService
 import io.quarkus.security.identity.SecurityIdentity
+import jakarta.inject.Inject
+import jakarta.ws.rs.GET
+import jakarta.ws.rs.PATCH
+import jakarta.ws.rs.Path
+import jakarta.ws.rs.core.Response
 import org.apache.http.HttpStatus
 import org.eclipse.microprofile.jwt.Claims
 import org.eclipse.microprofile.jwt.JsonWebToken
 import org.eclipse.microprofile.openapi.annotations.enums.SecuritySchemeType
 import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement
 import org.eclipse.microprofile.openapi.annotations.security.SecurityScheme
-import javax.inject.Inject
-import javax.ws.rs.GET
-import javax.ws.rs.PATCH
-import javax.ws.rs.Path
-import javax.ws.rs.core.Response
 
 // register SecurityScheme once
 @SecurityScheme(
@@ -29,8 +29,10 @@ import javax.ws.rs.core.Response
 class UserController {
     @Inject
     lateinit var userService: UserService
+
     @Inject
     lateinit var keycloakSecurityContext: SecurityIdentity
+
     @Inject
     lateinit var jwt: JsonWebToken
 

@@ -54,12 +54,12 @@ data class TimeIntervalModel @JsonCreator constructor(
 
         private fun areTimeIntervalModelsValid(timeIntervalModels: List<TimeIntervalModel>): Boolean {
             for ((index, timeIntervalModel) in timeIntervalModels.withIndex()) {
-                val startLocalDateTime = getLocalDateTime(timeIntervalModel.startDayOfWeek, timeIntervalModel.startTime)
-                val endLocalDateTime = getLocalDateTime(timeIntervalModel.endDayOfWeek, timeIntervalModel.endTime)
+                val startDateTime = getOffsetDateTime(timeIntervalModel.startDayOfWeek, timeIntervalModel.startTime)
+                val endDateTime = getOffsetDateTime(timeIntervalModel.endDayOfWeek, timeIntervalModel.endTime)
                 val otherTimeIntervalModels = timeIntervalModels.filterIndexed { idx, _ -> idx != index }
                 if (!timeIntervalModel.isValid() || otherTimeIntervalModels.any {
-                        it.contains(startLocalDateTime) || it.contains(
-                            endLocalDateTime
+                        it.contains(startDateTime) || it.contains(
+                            endDateTime
                         )
                     }) {
                     return false
@@ -68,10 +68,10 @@ data class TimeIntervalModel @JsonCreator constructor(
             return true
         }
 
-        private fun getLocalDateTime(dayOfWeek: DayOfWeek, localTime: OffsetTime): OffsetDateTime =
+        private fun getOffsetDateTime(dayOfWeek: DayOfWeek, time: OffsetTime): OffsetDateTime =
             OffsetDateTime.of(
-                LocalDateTime.of(LocalDate.now(), localTime.toLocalTime()).with(nextOrSame(dayOfWeek)),
-                ZoneOffset.UTC
+                LocalDateTime.of(LocalDate.now(), time.toLocalTime()).with(nextOrSame(dayOfWeek)),
+                time.offset
             )
     }
 
@@ -104,7 +104,7 @@ data class TimeIntervalModel @JsonCreator constructor(
 }
 
 fun List<TimeIntervalModel>.containsDates(
-    startLocalDateTime: OffsetDateTime,
-    endLocalDateTime: OffsetDateTime
+    startDateTime: OffsetDateTime,
+    endDateTime: OffsetDateTime
 ): Boolean =
-    this.any { it.contains(startLocalDateTime) && it.contains(endLocalDateTime) }
+    this.any { it.contains(startDateTime) && it.contains(endDateTime) }

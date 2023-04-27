@@ -2,10 +2,11 @@ package infrastructure.entity
 
 import io.quarkus.hibernate.orm.panache.kotlin.PanacheCompanion
 import io.quarkus.hibernate.orm.panache.kotlin.PanacheEntityBase
-import org.hibernate.annotations.Type
+import jakarta.persistence.*
+import org.hibernate.annotations.JdbcTypeCode
+import org.hibernate.type.SqlTypes
 import java.time.OffsetDateTime
 import java.util.*
-import javax.persistence.*
 
 
 @Entity
@@ -16,15 +17,18 @@ class ItemBooking : PanacheEntityBase {
 
     @Column
     @Id
-    @Type(type = "uuid-char")
+    @Basic
+    @JdbcTypeCode(SqlTypes.CHAR)
     var uuid: UUID = UUID.randomUUID()
 
     @Column(name = "item_uuid")
-    @Type(type = "uuid-char")
+    @Basic
+    @JdbcTypeCode(SqlTypes.CHAR)
     lateinit var itemUuid: UUID
 
     @Column(name = "user_uuid")
-    @Type(type = "uuid-char")
+    @Basic
+    @JdbcTypeCode(SqlTypes.CHAR)
     lateinit var userUuid: UUID
 
     @Column(name = "start_at")
