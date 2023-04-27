@@ -10,17 +10,21 @@ import infrastructure.entity.UserCommunityJoinRequest
 import infrastructure.entity.UserCommunityRelation
 import io.quarkus.panache.common.Sort
 import io.quarkus.test.junit.QuarkusTest
-import org.junit.jupiter.api.*
+import jakarta.inject.Inject
+import jakarta.persistence.EntityNotFoundException
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import testUtils.EntityUtil
 import java.util.*
-import javax.inject.Inject
-import javax.persistence.EntityNotFoundException
 
 @QuarkusTest
 class CommunityServiceTest {
     @Inject
     private lateinit var entityUtil: EntityUtil
+
     @Inject
     private lateinit var communityService: CommunityService
 
@@ -57,7 +61,8 @@ class CommunityServiceTest {
     @Test
     fun `when sorting paginated communities, then correct page order of community models is returned`() {
         val pageConfig = PageConfig()
-        val communityPage = communityService.getCommunitiesPage(user.uuid, pageConfig, CommunitySortBy.CITY, Sort.Direction.Descending)
+        val communityPage =
+            communityService.getCommunitiesPage(user.uuid, pageConfig, CommunitySortBy.CITY, Sort.Direction.Descending)
         assertEquals(CommunityModel(communityTwo), communityPage.content.first())
         assertEquals(CommunityModel(communityOne), communityPage.content.last())
     }
@@ -169,7 +174,7 @@ class CommunityServiceTest {
     @Test
     fun `when joining non-joinable community, then correct Exception is thrown`() {
         val user = entityUtil.setupUser()
-        val community = entityUtil.setupCommunity {  it.canBeJoined = false }
+        val community = entityUtil.setupCommunity { it.canBeJoined = false }
         assertThrows<CustomBadRequestException>("Forbidden: Community can not be joined.") {
             communityService.joinCommunity(user.uuid, community.uuid)
         }
@@ -210,10 +215,22 @@ class CommunityServiceTest {
         entityUtil.setupUserCommunityJoinRequest { it.communityUuid = community.uuid; it.userUuid = userOne.uuid }
         entityUtil.setupUserCommunityJoinRequest { it.communityUuid = community.uuid; it.userUuid = userTwo.uuid }
         communityService.approveRequestsForUsers(community.uuid, listOf(userOne.uuid, userTwo.uuid))
-        assertNotNull(UserCommunityRelation.find("communityUuid = ?1 AND userUuid = ?2", community.uuid, userOne.uuid).firstResult())
-        assertNotNull(UserCommunityRelation.find("communityUuid = ?1 AND userUuid = ?2", community.uuid, userTwo.uuid).firstResult())
-        assertNull(UserCommunityJoinRequest.find("communityUuid = ?1 AND userUuid = ?2", community.uuid, userOne.uuid).firstResult())
-        assertNull(UserCommunityJoinRequest.find("communityUuid = ?1 AND userUuid = ?2", community.uuid, userTwo.uuid).firstResult())
+        assertNotNull(
+            UserCommunityRelation.find("communityUuid = ?1 AND userUuid = ?2", community.uuid, userOne.uuid)
+                .firstResult()
+        )
+        assertNotNull(
+            UserCommunityRelation.find("communityUuid = ?1 AND userUuid = ?2", community.uuid, userTwo.uuid)
+                .firstResult()
+        )
+        assertNull(
+            UserCommunityJoinRequest.find("communityUuid = ?1 AND userUuid = ?2", community.uuid, userOne.uuid)
+                .firstResult()
+        )
+        assertNull(
+            UserCommunityJoinRequest.find("communityUuid = ?1 AND userUuid = ?2", community.uuid, userTwo.uuid)
+                .firstResult()
+        )
     }
 
     @Test
@@ -233,8 +250,14 @@ class CommunityServiceTest {
         entityUtil.setupUserCommunityJoinRequest { it.communityUuid = community.uuid; it.userUuid = userOne.uuid }
         entityUtil.setupUserCommunityJoinRequest { it.communityUuid = community.uuid; it.userUuid = userTwo.uuid }
         communityService.declineRequestsForUsers(community.uuid, listOf(userOne.uuid, userTwo.uuid))
-        assertNull(UserCommunityJoinRequest.find("communityUuid = ?1 AND userUuid = ?2", community.uuid, userOne.uuid).firstResult())
-        assertNull(UserCommunityJoinRequest.find("communityUuid = ?1 AND userUuid = ?2", community.uuid, userTwo.uuid).firstResult())
+        assertNull(
+            UserCommunityJoinRequest.find("communityUuid = ?1 AND userUuid = ?2", community.uuid, userOne.uuid)
+                .firstResult()
+        )
+        assertNull(
+            UserCommunityJoinRequest.find("communityUuid = ?1 AND userUuid = ?2", community.uuid, userTwo.uuid)
+                .firstResult()
+        )
     }
 
     @Test

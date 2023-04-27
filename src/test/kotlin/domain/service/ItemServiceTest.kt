@@ -11,6 +11,7 @@ import infrastructure.entity.ItemImage
 import infrastructure.entity.User
 import io.quarkus.panache.common.Sort
 import io.quarkus.test.junit.QuarkusTest
+import jakarta.inject.Inject
 import org.eclipse.microprofile.config.inject.ConfigProperty
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
@@ -23,14 +24,15 @@ import java.io.File
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.*
-import javax.inject.Inject
 
 @QuarkusTest
 class ItemServiceTest {
     @ConfigProperty(name = "app.storage.item-image.path")
     private lateinit var imagePath: String
+
     @Inject
     private lateinit var entityUtil: EntityUtil
+
     @Inject
     private lateinit var itemService: ItemService
 

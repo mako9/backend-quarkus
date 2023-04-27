@@ -2,11 +2,11 @@ package api.controller
 
 import api.dto.UserPatchDto
 import infrastructure.entity.User
-import io.quarkus.test.junit.QuarkusIntegrationTest
 import io.quarkus.test.junit.QuarkusTest
 import io.quarkus.test.keycloak.client.KeycloakTestClient
 import io.restassured.RestAssured
 import io.restassured.http.ContentType
+import jakarta.inject.Inject
 import org.hamcrest.CoreMatchers.equalTo
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -15,7 +15,6 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import testUtils.EntityUtil
-import javax.inject.Inject
 
 @QuarkusTest
 class UserControllerTest {

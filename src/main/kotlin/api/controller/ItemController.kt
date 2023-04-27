@@ -8,6 +8,11 @@ import domain.service.CommunityService
 import domain.service.ItemService
 import domain.service.UserService
 import io.quarkus.panache.common.Sort
+import jakarta.inject.Inject
+import jakarta.validation.constraints.Min
+import jakarta.ws.rs.*
+import jakarta.ws.rs.core.MediaType
+import jakarta.ws.rs.core.Response
 import org.apache.http.HttpStatus
 import org.eclipse.microprofile.jwt.Claims
 import org.eclipse.microprofile.jwt.JsonWebToken
@@ -20,11 +25,6 @@ import org.jboss.resteasy.reactive.MultipartForm
 import org.jboss.resteasy.reactive.ResponseStatus
 import org.jboss.resteasy.reactive.RestPath
 import java.util.*
-import javax.inject.Inject
-import javax.validation.constraints.Min
-import javax.ws.rs.*
-import javax.ws.rs.core.MediaType
-import javax.ws.rs.core.Response
 
 
 @Path("/user/item")
@@ -32,10 +32,13 @@ import javax.ws.rs.core.Response
 class ItemController {
     @Inject
     lateinit var itemService: ItemService
+
     @Inject
     lateinit var communityService: CommunityService
+
     @Inject
     lateinit var userService: UserService
+
     @Inject
     lateinit var jwt: JsonWebToken
 
@@ -48,7 +51,8 @@ class ItemController {
         @QueryParam("sortDirection") sortDirection: Sort.Direction?,
     ): PageDto<ItemDto> {
         val userUuid = getUserUuid()
-        val itemModelsPage = itemService.getItemsPageOfUser(userUuid, PageConfig(pageNumber, pageSize), sortBy, sortDirection)
+        val itemModelsPage =
+            itemService.getItemsPageOfUser(userUuid, PageConfig(pageNumber, pageSize), sortBy, sortDirection)
         return PageDto.of(itemModelsPage, ::ItemDto)
     }
 
@@ -63,7 +67,13 @@ class ItemController {
         val userUuid = getUserUuid()
         val communityPage = communityService.getCommunitiesPageByUser(userUuid, PageConfig(pageSize = 1000), null, null)
         val communityUuids = communityPage.content.map { it.uuid }
-        val itemModelsPage = itemService.getItemsPageOfCommunities(communityUuids, userUuid, PageConfig(pageNumber, pageSize), sortBy, sortDirection)
+        val itemModelsPage = itemService.getItemsPageOfCommunities(
+            communityUuids,
+            userUuid,
+            PageConfig(pageNumber, pageSize),
+            sortBy,
+            sortDirection
+        )
         return PageDto.of(itemModelsPage, ::ItemDto)
     }
 
@@ -154,8 +164,11 @@ class ItemController {
     @Path("/{uuid}/image")
     @Consumes(MediaType.MULTIPART_FORM_DATA)
     @ResponseStatus(HttpStatus.SC_CREATED)
-    @RequestBody(content = [Content(mediaType = MediaType.MULTIPART_FORM_DATA,
-        schema = Schema(implementation = MultipartDto::class))]
+    @RequestBody(
+        content = [Content(
+            mediaType = MediaType.MULTIPART_FORM_DATA,
+            schema = Schema(implementation = MultipartDto::class)
+        )]
     )
     fun uploadImages(
         @RestPath uuid: UUID,
@@ -182,7 +195,7 @@ class ItemController {
         return userModel.uuid
     }
 
-    private fun checkCommunity(communityUuid: UUID)  {
+    private fun checkCommunity(communityUuid: UUID) {
         communityService.getCommunityModel(communityUuid)
             ?: throw NotFoundException("No community found for UUID: $communityUuid")
     }

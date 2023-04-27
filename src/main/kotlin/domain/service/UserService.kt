@@ -7,10 +7,10 @@ import domain.model.UserModel
 import infrastructure.entity.User
 import io.quarkus.panache.common.Page
 import io.quarkus.panache.common.Parameters
+import jakarta.enterprise.context.ApplicationScoped
+import jakarta.transaction.Transactional
+import jakarta.ws.rs.WebApplicationException
 import java.util.*
-import javax.enterprise.context.ApplicationScoped
-import javax.transaction.Transactional
-import javax.ws.rs.WebApplicationException
 
 @ApplicationScoped
 @Transactional
@@ -44,7 +44,15 @@ class UserService {
         return userModel
     }
 
-    fun updateUser(mail: String, firstName: String?, lastName: String?, street: String?, houseNumber: String?, postalCode: String?, city: String?): UserModel {
+    fun updateUser(
+        mail: String,
+        firstName: String?,
+        lastName: String?,
+        street: String?,
+        houseNumber: String?,
+        postalCode: String?,
+        city: String?
+    ): UserModel {
         val user = User.find("mail", mail).firstResult()
             ?: throw WebApplicationException("No user exists with mail: $mail", 404)
         user.firstName = firstName ?: user.firstName
@@ -59,16 +67,20 @@ class UserService {
 
     fun getUsersByCommunityUuid(communityUuid: UUID, pageConfig: PageConfig): PageModel<UserModel> {
         val query = User
-            .find(query = "#User.getByCommunityUuid",
-                Parameters.with("communityUuid", communityUuid))
+            .find(
+                query = "#User.getByCommunityUuid",
+                Parameters.with("communityUuid", communityUuid)
+            )
             .page(Page.of(pageConfig.pageNumber, pageConfig.pageSize))
         return PageModel.of(query, ::UserModel)
     }
 
     fun getUsersWithRequestByCommunityUuid(communityUuid: UUID, pageConfig: PageConfig): PageModel<UserModel> {
         val query = User
-            .find(query = "#User.getWithRequestByCommunityUuid",
-                Parameters.with("communityUuid", communityUuid))
+            .find(
+                query = "#User.getWithRequestByCommunityUuid",
+                Parameters.with("communityUuid", communityUuid)
+            )
             .page(Page.of(pageConfig.pageNumber, pageConfig.pageSize))
         return PageModel.of(query, ::UserModel)
     }
