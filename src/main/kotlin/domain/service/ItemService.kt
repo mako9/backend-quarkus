@@ -47,7 +47,7 @@ class ItemService {
         sortBy: ItemSortBy?,
         sortDirection: Sort.Direction?
     ): PageModel<ItemModel> {
-        val sortByValue = sortBy?.getValue() ?: ItemSortBy.NAME.getValue()
+        val sortByValue = sortBy?.value ?: ItemSortBy.NAME.value
         val sortDirectionValue = sortDirection ?: Sort.Direction.Ascending
         val query = Item
             .find(
@@ -66,7 +66,7 @@ class ItemService {
         sortBy: ItemSortBy?,
         sortDirection: Sort.Direction?
     ): PageModel<ItemModel> {
-        val sortByValue = sortBy?.getValue() ?: ItemSortBy.NAME.getValue()
+        val sortByValue = sortBy?.value ?: ItemSortBy.NAME.value
         val sortDirectionValue = sortDirection ?: Sort.Direction.Ascending
         val query = Item
             .find("userUuid", sort = Sort.by(sortByValue, sortDirectionValue), userUuid)
@@ -148,7 +148,7 @@ class ItemService {
         sortBy: ItemBookingSortBy?,
         sortDirection: Sort.Direction?
     ): PageModel<ItemBookingModel> {
-        val sortByValue = sortBy?.name ?: ItemBookingSortBy.END_AT.name
+        val sortByValue = sortBy?.value ?: ItemBookingSortBy.END_AT.value
         val sortDirectionValue = sortDirection ?: Sort.Direction.Descending
         val query = ItemBooking
             .find("userUuid", sort = Sort.by(sortByValue, sortDirectionValue), userUuid)
@@ -163,7 +163,7 @@ class ItemService {
         sortBy: ItemBookingSortBy?,
         sortDirection: Sort.Direction?
     ): PageModel<ItemBookingModel> {
-        val sortByValue = sortBy?.getValue() ?: ItemBookingSortBy.END_AT.getValue()
+        val sortByValue = sortBy?.value ?: ItemBookingSortBy.END_AT.value
         val sortDirectionValue = sortDirection ?: Sort.Direction.Descending
         val query = ItemBooking
             .find(
@@ -190,7 +190,8 @@ class ItemService {
     fun bookItem(itemUuid: UUID, userUuid: UUID, startAt: OffsetDateTime, endAt: OffsetDateTime): ItemBookingModel {
         val item = getItemByUuid(itemUuid) ?: throw EntityNotFoundException("No item for UUID: $itemUuid")
         if (item.userUuid == userUuid) throw CustomBadRequestException(message = "Can not book owned item")
-        checkTimeAvailability(item, startAt, endAt)
+        checkInputDate(startAt, endAt)
+        checkItemAvailability(item, startAt, endAt)
         val itemBooking = ItemBooking(
             itemUuid = itemUuid,
             userUuid = userUuid,
@@ -222,20 +223,32 @@ class ItemService {
         return Paths.get("${imagePath}/${imageName}")
     }
 
-    private fun checkTimeAvailability(item: Item, startAt: OffsetDateTime, endAt: OffsetDateTime) {
+    private fun checkInputDate(startAt: OffsetDateTime, endAt: OffsetDateTime) {
         if (endAt <= startAt) throw CustomBadRequestException(
-            code = ErrorCode.InvalidInputParam,
-            message = "End of booking must be after start of booking: $endAt <= $startAt"
+            code = ErrorCode.InvalidInputParam
+        )
+    }
+
+    private fun checkItemAvailability(item: Item, startAt: OffsetDateTime, endAt: OffsetDateTime) {
+        val itemModel = ItemModel(item)
+        if (itemModel.availableUntil != null && endAt > itemModel.availableUntil) throw CustomBadRequestException(
+            code = ErrorCode.DateExceedsAvailableUntil
         )
 
-        val itemModel = ItemModel(item)
         if (itemModel.availability.isNotEmpty() && !itemModel.availability.containsDates(
                 startAt,
                 endAt
             )
         ) throw CustomBadRequestException(
-            code = ErrorCode.InvalidInputParam,
-            message = "The requested booking interval is outside availability intervals"
+            code = ErrorCode.DatesNotInInterval
+        )
+
+        if (ItemBooking.find(
+                "itemUuid = ?1 AND ((?2 BETWEEN startAt AND endAt) OR (?3 BETWEEN startAt AND endAt))",
+                item.uuid, startAt, endAt
+            ).count() > 0
+        ) throw CustomBadRequestException(
+            code = ErrorCode.ItemReserved
         )
     }
 }

@@ -205,7 +205,7 @@ class ItemController {
     }
 
     @GET
-    @Path("/booking/my")
+    @Path("/booking")
     fun getMyItemBookings(
         @QueryParam("pageNumber") @Min(0) pageNumber: Int?,
         @QueryParam("pageSize") @Range(min = 1, max = 100) pageSize: Int?,
@@ -254,7 +254,7 @@ class ItemController {
 
     @POST
     @ResponseStatus(HttpStatus.SC_CREATED)
-    @Path("/{uuid}")
+    @Path("/{uuid}/booking")
     fun bookItem(
         @RestPath uuid: UUID,
         itemBookingRequestDto: ItemBookingRequestDto

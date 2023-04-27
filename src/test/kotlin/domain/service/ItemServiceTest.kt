@@ -1,16 +1,22 @@
 package domain.service
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import common.ItemCategory
 import common.PageConfig
+import domain.model.ItemBookingModel
 import domain.model.ItemModel
 import domain.model.TimeIntervalModel
+import domain.model.exception.CustomBadRequestException
 import domain.model.exception.CustomForbiddenException
+import domain.model.exception.ErrorCode
+import domain.model.sort.ItemBookingSortBy
 import domain.model.sort.ItemSortBy
 import infrastructure.entity.*
 import io.quarkus.panache.common.Sort
 import io.quarkus.test.junit.QuarkusTest
 import io.quarkus.test.junit.TestProfile
 import jakarta.inject.Inject
+import jakarta.persistence.EntityNotFoundException
 import org.eclipse.microprofile.config.inject.ConfigProperty
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
@@ -25,6 +31,7 @@ import java.io.File
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.time.OffsetDateTime
+import java.time.ZoneOffset
 import java.util.*
 import kotlin.io.path.Path
 
@@ -41,24 +48,41 @@ class ItemServiceTest {
     private lateinit var itemService: ItemService
 
     private lateinit var user: User
+    private lateinit var requestingUser: User
     private lateinit var community: Community
     private lateinit var itemOne: Item
     private lateinit var itemTwo: Item
     private lateinit var itemThree: Item
     private lateinit var itemFour: Item
+    private lateinit var itemBookingOne: ItemBooking
+    private lateinit var itemBookingTwo: ItemBooking
 
     @BeforeEach
     fun beforeEach() {
         user = entityUtil.setupUser()
+        requestingUser = entityUtil.setupUser()
         community = entityUtil.setupCommunity()
         itemOne = entityUtil.setupItem {
-            it.name = "aaa"; it.communityUuid = community.uuid; it.userUuid = user.uuid; it.city = "aaa"
+            it.name = "aaa"; it.communityUuid = community.uuid; it.userUuid = user.uuid; it.city =
+            "aaa"; it.availableUntil = OffsetDateTime.now().plusDays(4)
         }
         itemTwo = entityUtil.setupItem {
-            it.name = "bbb"; it.communityUuid = community.uuid; it.userUuid = user.uuid; it.city = "bbb"
+            it.name = "bbb"; it.communityUuid = community.uuid; it.userUuid = user.uuid; it.city =
+            "bbb"; it.availability =
+            ObjectMapper().writeValueAsString(
+                listOf(
+                    TimeIntervalModel(1, 1, 60, 180)
+                )
+            )
         }
         itemThree = entityUtil.setupItem { it.name = "ccc"; it.communityUuid = community.uuid; it.city = "aaa" }
         itemFour = entityUtil.setupItem { it.name = "ddd"; it.communityUuid = community.uuid; it.city = "bbb" }
+
+        itemBookingOne = entityUtil.setupItemBooking { it.itemUuid = itemThree.uuid; it.userUuid = requestingUser.uuid }
+        itemBookingTwo = entityUtil.setupItemBooking {
+            it.itemUuid = itemThree.uuid; it.userUuid = requestingUser.uuid; it.startAt =
+            OffsetDateTime.now().plusDays(7); it.endAt = OffsetDateTime.now().plusDays(8)
+        }
 
         Files.createDirectories(Paths.get(imagePath))
     }
@@ -254,8 +278,62 @@ class ItemServiceTest {
     }
 
     @Test
+    fun `when retrieving item bookings of user, then page of item booking is returned`() {
+        val page = itemService.getItemBookingsPageOfUser(requestingUser.uuid, PageConfig(), null, null)
+
+        assertEquals(page.pageSize, 50)
+        assertEquals(page.pageNumber, 0)
+        assertEquals(page.isFirstPage, true)
+        assertEquals(page.isLastPage, true)
+        assertEquals(page.totalElements, 2)
+        assertEquals(page.content.first().uuid, itemBookingTwo.uuid)
+        assertEquals(page.content.last().uuid, itemBookingOne.uuid)
+    }
+
+    @Test
+    fun `when retrieving item bookings of item, then page of item booking is returned`() {
+        val page = itemService.getItemBookingsPageOfItem(
+            requestingUser.uuid,
+            itemThree.uuid,
+            PageConfig(1, 1),
+            ItemBookingSortBy.CREATED_AT,
+            Sort.Direction.Ascending
+        )
+
+        assertEquals(page.pageSize, 1)
+        assertEquals(page.pageNumber, 1)
+        assertEquals(page.isFirstPage, false)
+        assertEquals(page.isLastPage, true)
+        assertEquals(page.totalElements, 2)
+        assertEquals(page.content.first().uuid, itemBookingTwo.uuid)
+    }
+
+    @Test
+    fun `when retrieving item booking, then item booking is returned`() {
+        val itemBookingModel = ItemBookingModel(itemBookingOne)
+        val retrievedItemBookingModel = itemService.getItemBooking(itemBookingModel.userUuid, itemBookingModel.uuid)
+
+        assertEquals(itemBookingModel.uuid, retrievedItemBookingModel.uuid)
+        assertEquals(itemBookingModel.itemUuid, retrievedItemBookingModel.itemUuid)
+        assertEquals(itemBookingModel.userUuid, retrievedItemBookingModel.userUuid)
+        assertOffsetDateTimeEquals(itemBookingModel.startAt, retrievedItemBookingModel.startAt)
+        assertOffsetDateTimeEquals(itemBookingModel.endAt, retrievedItemBookingModel.endAt)
+        assertOffsetDateTimeEquals(itemBookingModel.createdAt, retrievedItemBookingModel.createdAt)
+    }
+
+    @Test
+    fun `when retrieving not existing item booking, then item booking is returned`() {
+        assertThrows(EntityNotFoundException::class.java) {
+            itemService.getItemBooking(UUID.randomUUID(), itemOne.uuid)
+        }
+
+        assertThrows(EntityNotFoundException::class.java) {
+            itemService.getItemBooking(requestingUser.uuid, UUID.randomUUID())
+        }
+    }
+
+    @Test
     fun `when booking item, then item booking is created`() {
-        val requestingUser = entityUtil.setupUser()
         val itemBookingModel = itemService.bookItem(
             itemOne.uuid,
             requestingUser.uuid,
@@ -271,5 +349,70 @@ class ItemServiceTest {
         assertOffsetDateTimeEquals(itemBookingModel.startAt, storedItemBooking?.startAt)
         assertOffsetDateTimeEquals(itemBookingModel.endAt, storedItemBooking?.endAt)
         assertOffsetDateTimeEquals(itemBookingModel.createdAt, storedItemBooking?.createdAt)
+    }
+
+    @Test
+    fun `when booking item with invalid params, then correct error is thrown`() {
+        val exception = assertThrows(CustomBadRequestException::class.java) {
+            itemService.bookItem(
+                itemOne.uuid,
+                requestingUser.uuid,
+                OffsetDateTime.now().plusDays(2),
+                OffsetDateTime.now()
+            )
+        }
+
+        assertEquals(listOf(ErrorCode.InvalidInputParam), exception.codes)
+        assertEquals(0, ItemBooking.find("itemUuid = ?1", itemOne.uuid).count())
+    }
+
+    @Test
+    fun `when booking item with date which exceeds availableUntil date, then correct error is thrown`() {
+        val exception = assertThrows(CustomBadRequestException::class.java) {
+            itemService.bookItem(
+                itemOne.uuid,
+                requestingUser.uuid,
+                OffsetDateTime.now().plusDays(1),
+                OffsetDateTime.now().plusDays(10)
+            )
+        }
+
+        assertEquals(listOf(ErrorCode.DateExceedsAvailableUntil), exception.codes)
+        assertEquals(0, ItemBooking.find("itemUuid = ?1", itemOne.uuid).count())
+    }
+
+    @Test
+    fun `when booking item with dates which are not in availability intervals, then correct error is thrown`() {
+        val exception = assertThrows(CustomBadRequestException::class.java) {
+            itemService.bookItem(
+                itemTwo.uuid,
+                requestingUser.uuid,
+                OffsetDateTime.of(2023, 4, 17, 1, 1, 0, 0, ZoneOffset.UTC),
+                OffsetDateTime.of(2023, 4, 18, 1, 20, 0, 0, ZoneOffset.UTC)
+            )
+        }
+
+        assertEquals(listOf(ErrorCode.DatesNotInInterval), exception.codes)
+        assertEquals(0, ItemBooking.find("itemUuid = ?1", itemTwo.uuid).count())
+    }
+
+    @Test
+    fun `when booking item which is already booked, then correct error is thrown`() {
+        entityUtil.setupItemBooking {
+            it.itemUuid = itemOne.uuid
+            it.startAt = OffsetDateTime.now()
+            it.endAt = OffsetDateTime.now().plusDays(3)
+        }
+        val exception = assertThrows(CustomBadRequestException::class.java) {
+            itemService.bookItem(
+                itemOne.uuid,
+                requestingUser.uuid,
+                OffsetDateTime.now().plusDays(1),
+                OffsetDateTime.now().plusDays(2)
+            )
+        }
+
+        assertEquals(listOf(ErrorCode.ItemReserved), exception.codes)
+        assertEquals(1, ItemBooking.find("itemUuid = ?1", itemOne.uuid).count())
     }
 }

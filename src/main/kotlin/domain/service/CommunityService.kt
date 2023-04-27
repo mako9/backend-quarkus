@@ -25,7 +25,7 @@ class CommunityService {
         sortBy: CommunitySortBy?,
         sortDirection: Sort.Direction?
     ): PageModel<CommunityModel> {
-        val sortByValue = sortBy?.getValue() ?: CommunitySortBy.NAME.getValue()
+        val sortByValue = sortBy?.value ?: CommunitySortBy.NAME.value
         val sortDirectionValue = sortDirection ?: Sort.Direction.Ascending
         val query = Community
             .find(
@@ -43,7 +43,7 @@ class CommunityService {
         sortBy: CommunitySortBy?,
         sortDirection: Sort.Direction?
     ): PageModel<CommunityModel> {
-        val sortByValue = sortBy?.getValue() ?: CommunitySortBy.NAME.getValue()
+        val sortByValue = sortBy?.value ?: CommunitySortBy.NAME.value
         val sortDirectionValue = sortDirection ?: Sort.Direction.Ascending
         val query = Community
             .find(
@@ -61,7 +61,7 @@ class CommunityService {
         sortBy: CommunitySortBy?,
         sortDirection: Sort.Direction?
     ): PageModel<CommunityModel> {
-        val sortByValue = sortBy?.getValue() ?: CommunitySortBy.NAME.getValue()
+        val sortByValue = sortBy?.value ?: CommunitySortBy.NAME.value
         val sortDirectionValue = sortDirection ?: Sort.Direction.Ascending
         val query = Community
             .find(query = "adminUuid", Sort.by(sortByValue, sortDirectionValue), adminUuid)

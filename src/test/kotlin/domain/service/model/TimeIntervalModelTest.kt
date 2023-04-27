@@ -72,7 +72,7 @@ class TimeIntervalModelTest {
             assertTrue(
                 timeIntervalModels.containsDates(
                     OffsetDateTime.of(2023, 4, 17, 1, 1, 0, 0, ZoneOffset.UTC),
-                    OffsetDateTime.of(2023, 4, 17, 1, 20, 0, 0, ZoneOffset.UTC),
+                    OffsetDateTime.of(2023, 4, 17, 1, 20, 0, 0, ZoneOffset.UTC)
                 )
             )
         }
@@ -81,7 +81,7 @@ class TimeIntervalModelTest {
             assertFalse(
                 timeIntervalModels.containsDates(
                     OffsetDateTime.of(2023, 4, 21, 1, 1, 0, 0, ZoneOffset.UTC),
-                    OffsetDateTime.of(2023, 4, 17, 1, 20, 0, 0, ZoneOffset.UTC),
+                    OffsetDateTime.of(2023, 4, 17, 1, 20, 0, 0, ZoneOffset.UTC)
                 )
             )
         }
@@ -89,13 +89,13 @@ class TimeIntervalModelTest {
         run {
             timeIntervalModels = listOf(
                 TimeIntervalModel(1, 1, 60, 180),
-                TimeIntervalModel(3, 3, 60, 180),
+                TimeIntervalModel(3, 3, 60, 180)
             )
 
             assertFalse(
                 timeIntervalModels.containsDates(
                     OffsetDateTime.of(2023, 4, 17, 1, 1, 0, 0, ZoneOffset.UTC),
-                    OffsetDateTime.of(2023, 4, 18, 1, 20, 0, 0, ZoneOffset.UTC),
+                    OffsetDateTime.of(2023, 4, 18, 1, 20, 0, 0, ZoneOffset.UTC)
                 )
             )
         }
