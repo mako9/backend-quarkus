@@ -86,6 +86,10 @@
             <artifactId>resteasy-multipart-provider</artifactId>
             <version>6.2.3.Final</version>
         </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-jackson</artifactId>
+        </dependency>
 
         <!-- Testing: -->
         <dependency>
@@ -193,20 +197,6 @@
                         <option>all-open:annotation=io.quarkus.test.junit.QuarkusTest</option>
                     </pluginOptions>
                 </configuration>
-            </plugin>
-
-            <plugin>
-                <!-- This is what injects the magic Quarkus bytecode -->
-                <groupId>io.quarkus</groupId>
-                <artifactId>quarkus-maven-plugin</artifactId>
-                <version>${quarkus-plugin.version}</version>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>build</goal>
-                        </goals>
-                    </execution>
-                </executions>
             </plugin>
         </plugins>
     </build>

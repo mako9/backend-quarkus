@@ -2,7 +2,10 @@ package api.dto
 
 import common.ItemCategory
 import domain.model.ItemModel
+import domain.model.TimeIntervalModel
+import utils.DateTimeUtils.getMinutesOfOffsetTime
 import java.time.OffsetDateTime
+import java.time.OffsetTime
 import java.util.*
 
 data class ItemDto(
@@ -12,7 +15,7 @@ data class ItemDto(
     var communityUuid: UUID,
     var communityName: String?
 ) {
-    constructor(itemModel: ItemModel): this(
+    constructor(itemModel: ItemModel) : this(
         uuid = itemModel.uuid,
         name = itemModel.name,
         categories = itemModel.categories,
@@ -32,14 +35,14 @@ data class ItemDetailDto(
     var isActive: Boolean = false,
     var communityUuid: UUID,
     var userUuid: UUID,
-    var availability: String?,
+    var availability: List<ItemTimeIntervalDto>,
     var availableUntil: OffsetDateTime?,
     var description: String?,
     var isOwner: Boolean = false,
     var communityName: String?
 ) {
 
-    constructor(itemModel: ItemModel): this(
+    constructor(itemModel: ItemModel) : this(
         uuid = itemModel.uuid,
         name = itemModel.name,
         categories = itemModel.categories,
@@ -50,7 +53,7 @@ data class ItemDetailDto(
         isActive = itemModel.isActive,
         communityUuid = itemModel.communityUuid,
         userUuid = itemModel.userUuid,
-        availability = itemModel.availability,
+        availability = itemModel.availability.map { ItemTimeIntervalDto(it) },
         availableUntil = itemModel.availableUntil,
         description = itemModel.description,
         communityName = itemModel.communityModel?.name
@@ -66,7 +69,33 @@ data class ItemRequestDto(
     val city: String? = null,
     var isActive: Boolean = false,
     var communityUuid: UUID,
-    var availability: String? = null,
+    var availability: List<ItemTimeIntervalDto> = emptyList(),
     var availableUntil: OffsetDateTime? = null,
     var description: String? = null
 )
+
+data class ItemBookingRequestDto(
+    var startAt: OffsetDateTime,
+    var endAt: OffsetDateTime
+)
+
+data class ItemTimeIntervalDto(
+    val startDayOfWeek: Int,
+    val endDayOfWeek: Int,
+    val startTimeAt: OffsetTime,
+    val endTimeAt: OffsetTime
+) {
+    constructor(timeIntervalModel: TimeIntervalModel) : this(
+        startDayOfWeek = timeIntervalModel.startDayOfWeek.value,
+        endDayOfWeek = timeIntervalModel.endDayOfWeek.value,
+        startTimeAt = timeIntervalModel.startTime,
+        endTimeAt = timeIntervalModel.endTime,
+    )
+
+    fun toTimeIntervalModel(): TimeIntervalModel = TimeIntervalModel(
+        startDayOfWeekInt = this.startDayOfWeek,
+        endDayOfWeekInt = this.endDayOfWeek,
+        startTimeAtInMinute = this.startTimeAt.getMinutesOfOffsetTime(),
+        endTimeAtInMinute = this.endTimeAt.getMinutesOfOffsetTime(),
+    )
+}

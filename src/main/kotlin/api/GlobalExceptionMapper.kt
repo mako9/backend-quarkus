@@ -1,7 +1,10 @@
 package api
 
+import api.dto.ErrorDto
 import domain.model.exception.CustomBadRequestException
+import domain.model.exception.CustomException
 import domain.model.exception.CustomForbiddenException
+import io.quarkus.logging.Log
 import jakarta.persistence.EntityNotFoundException
 import jakarta.ws.rs.core.Response
 import org.jboss.resteasy.reactive.RestResponse
@@ -10,16 +13,17 @@ import org.jboss.resteasy.reactive.server.ServerExceptionMapper
 open class GlobalExceptionMapper {
     @ServerExceptionMapper
     open fun mapNotFoundException(x: EntityNotFoundException): RestResponse<Any?>? {
+        Log.warn("Could not find entity: $x")
         return RestResponse.status<Any?>(Response.Status.NOT_FOUND, "Entity not found: ${x.message}")
     }
 
     @ServerExceptionMapper
-    open fun mapBadRequestException(x: CustomBadRequestException): RestResponse<Any?>? {
-        return RestResponse.status<Any?>(Response.Status.BAD_REQUEST, "Bad request: ${x.message}")
-    }
-
-    @ServerExceptionMapper
-    open fun mapForbiddenException(x: CustomForbiddenException): RestResponse<Any?>? {
-        return RestResponse.status<Any?>(Response.Status.FORBIDDEN, "Forbidden: ${x.message}")
+    open fun mapCustomException(x: CustomException): RestResponse<Any?>? {
+        val status = when (x) {
+            is CustomBadRequestException -> Response.Status.BAD_REQUEST
+            is CustomForbiddenException -> Response.Status.FORBIDDEN
+        }
+        Log.warn("Received custom exception with status $status: $x")
+        return RestResponse.status<Any?>(status, ErrorDto(exception = x))
     }
 }

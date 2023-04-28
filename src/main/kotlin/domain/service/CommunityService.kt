@@ -25,7 +25,7 @@ class CommunityService {
         sortBy: CommunitySortBy?,
         sortDirection: Sort.Direction?
     ): PageModel<CommunityModel> {
-        val sortByValue = sortBy?.getValue() ?: CommunitySortBy.NAME.getValue()
+        val sortByValue = sortBy?.value ?: CommunitySortBy.NAME.value
         val sortDirectionValue = sortDirection ?: Sort.Direction.Ascending
         val query = Community
             .find(
@@ -43,7 +43,7 @@ class CommunityService {
         sortBy: CommunitySortBy?,
         sortDirection: Sort.Direction?
     ): PageModel<CommunityModel> {
-        val sortByValue = sortBy?.getValue() ?: CommunitySortBy.NAME.getValue()
+        val sortByValue = sortBy?.value ?: CommunitySortBy.NAME.value
         val sortDirectionValue = sortDirection ?: Sort.Direction.Ascending
         val query = Community
             .find(
@@ -61,7 +61,7 @@ class CommunityService {
         sortBy: CommunitySortBy?,
         sortDirection: Sort.Direction?
     ): PageModel<CommunityModel> {
-        val sortByValue = sortBy?.getValue() ?: CommunitySortBy.NAME.getValue()
+        val sortByValue = sortBy?.value ?: CommunitySortBy.NAME.value
         val sortDirectionValue = sortDirection ?: Sort.Direction.Ascending
         val query = Community
             .find(query = "adminUuid", Sort.by(sortByValue, sortDirectionValue), adminUuid)
@@ -113,7 +113,7 @@ class CommunityService {
     fun joinCommunity(userUuid: UUID, communityUuid: UUID) {
         val community =
             getCommunity(communityUuid) ?: throw EntityNotFoundException("No community for UUID: $communityUuid")
-        if (!community.canBeJoined) throw CustomBadRequestException("Community can not be joined.")
+        if (!community.canBeJoined) throw CustomBadRequestException(message = "Community can not be joined.")
         UserCommunityJoinRequest(
             userUuid,
             communityUuid
@@ -124,7 +124,7 @@ class CommunityService {
         getCommunity(communityUuid) ?: throw EntityNotFoundException("No community for UUID: $communityUuid")
         val relation =
             UserCommunityRelation.find("userUuid = ?1 AND communityUuid = ?2", userUuid, communityUuid).firstResult()
-                ?: throw CustomBadRequestException("Not a member of community: $communityUuid")
+                ?: throw CustomBadRequestException(message = "Not a member of community: $communityUuid")
         relation.delete()
     }
 
@@ -158,7 +158,7 @@ class CommunityService {
             .list()
         val userUuidsWithMissingRequests =
             userUuids.filter { userUuid -> !requests.map { it.userUuid }.contains(userUuid) }
-        if (userUuidsWithMissingRequests.isNotEmpty()) throw CustomBadRequestException("No requests found for users: $userUuidsWithMissingRequests")
+        if (userUuidsWithMissingRequests.isNotEmpty()) throw CustomBadRequestException(message = "No requests found for users: $userUuidsWithMissingRequests")
         return requests
     }
 }

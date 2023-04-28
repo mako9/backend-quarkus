@@ -5,6 +5,7 @@ import common.UserRole
 import infrastructure.entity.*
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.transaction.Transactional
+import java.time.OffsetDateTime
 import java.util.*
 
 @ApplicationScoped
@@ -15,6 +16,7 @@ class EntityUtil {
         UserCommunityRelation.deleteAll()
         UserCommunityJoinRequest.deleteAll()
         ItemImage.deleteAll()
+        ItemBooking.deleteAll()
         Item.deleteAll()
         Community.deleteAll()
         User.deleteAll()
@@ -125,5 +127,24 @@ class EntityUtil {
         itemImage.persist()
 
         return itemImage
+    }
+
+    fun setupItemBooking(intercept: (ItemBooking) -> Unit = {}): ItemBooking {
+        val itemBooking = ItemBooking(
+            itemUuid = UUID.randomUUID(),
+            userUuid = UUID.randomUUID(),
+            startAt = OffsetDateTime.now(),
+            endAt = OffsetDateTime.now().plusDays(1)
+        )
+        intercept(itemBooking)
+        if (User.find("uuid", itemBooking.userUuid).firstResult() == null) {
+            setupUser { it.uuid = itemBooking.userUuid }
+        }
+        if (Item.find("uuid", itemBooking.itemUuid).firstResult() == null) {
+            setupItem { it.uuid = itemBooking.itemUuid }
+        }
+        itemBooking.persist()
+
+        return itemBooking
     }
 }

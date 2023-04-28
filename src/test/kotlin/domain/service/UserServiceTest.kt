@@ -3,15 +3,18 @@ package domain.service
 import common.PageConfig
 import domain.model.UserModel
 import io.quarkus.test.junit.QuarkusTest
+import io.quarkus.test.junit.TestProfile
 import jakarta.inject.Inject
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 import testUtils.EntityUtil
+import testUtils.UnitTestProfile
 import java.util.*
 
 @QuarkusTest
+@TestProfile(UnitTestProfile::class)
 class UserServiceTest {
     @Inject
     private lateinit var entityUtil: EntityUtil

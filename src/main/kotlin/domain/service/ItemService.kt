@@ -1,15 +1,23 @@
 package domain.service
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import common.PageConfig
+import domain.model.ItemBookingModel
 import domain.model.ItemModel
 import domain.model.PageModel
+import domain.model.containsDates
+import domain.model.exception.CustomBadRequestException
 import domain.model.exception.CustomForbiddenException
+import domain.model.exception.ErrorCode
+import domain.model.sort.ItemBookingSortBy
 import domain.model.sort.ItemSortBy
 import infrastructure.entity.Item
+import infrastructure.entity.ItemBooking
 import infrastructure.entity.ItemImage
 import io.quarkus.panache.common.Page
 import io.quarkus.panache.common.Sort
 import jakarta.enterprise.context.ApplicationScoped
+import jakarta.inject.Inject
 import jakarta.persistence.EntityNotFoundException
 import jakarta.transaction.Transactional
 import org.eclipse.microprofile.config.inject.ConfigProperty
@@ -18,9 +26,9 @@ import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.util.*
+import kotlin.io.path.Path
 import kotlin.io.path.pathString
 
 @ApplicationScoped
@@ -29,6 +37,9 @@ class ItemService {
     @ConfigProperty(name = "app.storage.item-image.path")
     private lateinit var imagePath: String
 
+    @Inject
+    lateinit var objectMapper: ObjectMapper
+
     fun getItemsPageOfCommunities(
         communityUuids: List<UUID>,
         userUuid: UUID,
@@ -36,7 +47,7 @@ class ItemService {
         sortBy: ItemSortBy?,
         sortDirection: Sort.Direction?
     ): PageModel<ItemModel> {
-        val sortByValue = sortBy?.getValue() ?: ItemSortBy.NAME.getValue()
+        val sortByValue = sortBy?.value ?: ItemSortBy.NAME.value
         val sortDirectionValue = sortDirection ?: Sort.Direction.Ascending
         val query = Item
             .find(
@@ -55,7 +66,7 @@ class ItemService {
         sortBy: ItemSortBy?,
         sortDirection: Sort.Direction?
     ): PageModel<ItemModel> {
-        val sortByValue = sortBy?.getValue() ?: ItemSortBy.NAME.getValue()
+        val sortByValue = sortBy?.value ?: ItemSortBy.NAME.value
         val sortDirectionValue = sortDirection ?: Sort.Direction.Ascending
         val query = Item
             .find("userUuid", sort = Sort.by(sortByValue, sortDirectionValue), userUuid)
@@ -85,7 +96,7 @@ class ItemService {
         item.city = itemModel.city
         item.communityUuid = itemModel.communityUuid
         item.isActive = itemModel.isActive
-        item.availability = itemModel.availability
+        item.availability = ObjectMapper().writeValueAsString(itemModel.availability)
         item.description = itemModel.description
         item.updatedAt = OffsetDateTime.now()
         item.persist()
@@ -105,26 +116,100 @@ class ItemService {
         return itemImages.map { it.uuid }
     }
 
-    fun saveItemImages(itemUuid: UUID, fileUpload: FileUpload) {
+    fun saveItemImage(itemUuid: UUID, fileUpload: FileUpload, userUuid: UUID): UUID {
+        val item = getItemByUuid(itemUuid) ?: throw EntityNotFoundException("No item for UUID: $itemUuid")
+        checkUserRight(userUuid, item)
         val path = createImagePath(itemUuid, fileUpload.fileName())
         Files.copy(fileUpload.uploadedFile(), path)
-        ItemImage.persist(
-            ItemImage(
-                itemUuid,
-                path.pathString
-            )
+        val image = ItemImage(
+            itemUuid,
+            path.pathString
         )
+        ItemImage.persist(image)
+        return image.uuid
     }
 
-    fun getItemImage(uuid: UUID): File {
-        val itemImage = ItemImage
-            .find("uuid", uuid)
-            .firstResult() ?: throw EntityNotFoundException("No item image for UUID: $uuid")
+    fun getItemImageFile(uuid: UUID): File {
+        val itemImage = getItemImage(uuid)
         return File(itemImage.path)
+    }
+
+    fun deleteItemImage(uuid: UUID, userUuid: UUID) {
+        val itemImage = getItemImage(uuid)
+        val item = getItemByUuid(itemImage.itemUuid) ?: throw EntityNotFoundException("No item for UUID: $uuid")
+        checkUserRight(userUuid, item)
+        Files.deleteIfExists(Path(itemImage.path))
+        itemImage.delete()
+    }
+
+    fun getItemBookingsPageOfUser(
+        userUuid: UUID,
+        pageConfig: PageConfig,
+        sortBy: ItemBookingSortBy?,
+        sortDirection: Sort.Direction?
+    ): PageModel<ItemBookingModel> {
+        val sortByValue = sortBy?.value ?: ItemBookingSortBy.END_AT.value
+        val sortDirectionValue = sortDirection ?: Sort.Direction.Descending
+        val query = ItemBooking
+            .find("userUuid", sort = Sort.by(sortByValue, sortDirectionValue), userUuid)
+            .page(Page.of(pageConfig.pageNumber, pageConfig.pageSize))
+        return PageModel.of(query, ::ItemBookingModel)
+    }
+
+    fun getItemBookingsPageOfItem(
+        userUuid: UUID,
+        itemUuid: UUID,
+        pageConfig: PageConfig,
+        sortBy: ItemBookingSortBy?,
+        sortDirection: Sort.Direction?
+    ): PageModel<ItemBookingModel> {
+        val sortByValue = sortBy?.value ?: ItemBookingSortBy.END_AT.value
+        val sortDirectionValue = sortDirection ?: Sort.Direction.Descending
+        val query = ItemBooking
+            .find(
+                "userUuid = ?1 AND itemUuid = ?2",
+                sort = Sort.by(sortByValue, sortDirectionValue),
+                userUuid,
+                itemUuid
+            )
+            .page(Page.of(pageConfig.pageNumber, pageConfig.pageSize))
+        return PageModel.of(query, ::ItemBookingModel)
+    }
+
+    fun getItemBooking(
+        userUuid: UUID,
+        uuid: UUID
+    ): ItemBookingModel {
+        val itemBooking = ItemBooking
+            .find("uuid", uuid)
+            .firstResult() ?: throw EntityNotFoundException("No item booking for UUID: $uuid")
+        if (itemBooking.userUuid != userUuid) throw CustomForbiddenException("User not allowed to see item booking")
+        return ItemBookingModel(itemBooking)
+    }
+
+    fun bookItem(itemUuid: UUID, userUuid: UUID, startAt: OffsetDateTime, endAt: OffsetDateTime): ItemBookingModel {
+        val item = getItemByUuid(itemUuid) ?: throw EntityNotFoundException("No item for UUID: $itemUuid")
+        if (item.userUuid == userUuid) throw CustomBadRequestException(message = "Can not book owned item")
+        checkInputDate(startAt, endAt)
+        checkItemAvailability(item, startAt, endAt)
+        val itemBooking = ItemBooking(
+            itemUuid = itemUuid,
+            userUuid = userUuid,
+            startAt = startAt,
+            endAt = endAt
+        )
+        itemBooking.persist()
+        return ItemBookingModel(itemBooking)
     }
 
     private fun getItemByUuid(uuid: UUID): Item? {
         return Item.find("uuid", uuid).firstResult()
+    }
+
+    private fun getItemImage(uuid: UUID): ItemImage {
+        return ItemImage
+            .find("uuid", uuid)
+            .firstResult() ?: throw EntityNotFoundException("No item image for UUID: $uuid")
     }
 
     private fun checkUserRight(userUuid: UUID, item: Item) {
@@ -133,8 +218,37 @@ class ItemService {
 
     private fun createImagePath(itemUuid: UUID, fileName: String): Path {
         val extension = fileName.substringAfterLast(".")
-        val dateTime = LocalDate.now().toString()
+        val dateTime = OffsetDateTime.now().toString()
         val imageName = "${itemUuid}_${dateTime}_${UUID.randomUUID()}.${extension}"
         return Paths.get("${imagePath}/${imageName}")
+    }
+
+    private fun checkInputDate(startAt: OffsetDateTime, endAt: OffsetDateTime) {
+        if (endAt <= startAt) throw CustomBadRequestException(
+            code = ErrorCode.InvalidInputParam
+        )
+    }
+
+    private fun checkItemAvailability(item: Item, startAt: OffsetDateTime, endAt: OffsetDateTime) {
+        val itemModel = ItemModel(item)
+        if (itemModel.availableUntil != null && endAt > itemModel.availableUntil) throw CustomBadRequestException(
+            code = ErrorCode.DateExceedsAvailableUntil
+        )
+
+        if (itemModel.availability.isNotEmpty() && !itemModel.availability.containsDates(
+                startAt,
+                endAt
+            )
+        ) throw CustomBadRequestException(
+            code = ErrorCode.DatesNotInInterval
+        )
+
+        if (ItemBooking.find(
+                "itemUuid = ?1 AND ((?2 BETWEEN startAt AND endAt) OR (?3 BETWEEN startAt AND endAt))",
+                item.uuid, startAt, endAt
+            ).count() > 0
+        ) throw CustomBadRequestException(
+            code = ErrorCode.ItemReserved
+        )
     }
 }

@@ -3,6 +3,7 @@ package api.controller
 import api.dto.*
 import common.PageConfig
 import domain.model.ItemModel
+import domain.model.sort.ItemBookingSortBy
 import domain.model.sort.ItemSortBy
 import domain.service.CommunityService
 import domain.service.ItemService
@@ -21,9 +22,10 @@ import org.eclipse.microprofile.openapi.annotations.media.Schema
 import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody
 import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement
 import org.hibernate.validator.constraints.Range
-import org.jboss.resteasy.reactive.MultipartForm
+import org.jboss.resteasy.annotations.providers.multipart.MultipartForm
 import org.jboss.resteasy.reactive.ResponseStatus
 import org.jboss.resteasy.reactive.RestPath
+import java.net.URI
 import java.util.*
 
 
@@ -105,7 +107,7 @@ class ItemController {
             itemRequestDto.communityUuid,
             userUuid,
             itemRequestDto.isActive,
-            availability = itemRequestDto.availability,
+            availability = itemRequestDto.availability.map { it.toTimeIntervalModel() },
             availableUntil = itemRequestDto.availableUntil,
             description = itemRequestDto.description
         )
@@ -133,7 +135,7 @@ class ItemController {
             itemRequestDto.communityUuid,
             userUuid,
             itemRequestDto.isActive,
-            availability = itemRequestDto.availability,
+            availability = itemRequestDto.availability.map { it.toTimeIntervalModel() },
             availableUntil = itemRequestDto.availableUntil,
             description = itemRequestDto.description
         )
@@ -173,8 +175,10 @@ class ItemController {
     fun uploadImages(
         @RestPath uuid: UUID,
         @MultipartForm multipartDto: MultipartDto
-    ) {
-        itemService.saveItemImages(uuid, multipartDto.file)
+    ): Response {
+        val imageUuid = itemService.saveItemImage(uuid, multipartDto.file, getUserUuid())
+
+        return Response.created(URI.create("/image/${imageUuid}")).build()
     }
 
     @GET
@@ -183,10 +187,87 @@ class ItemController {
     fun getItemImage(
         @RestPath uuid: UUID
     ): Response? {
-        val file = itemService.getItemImage(uuid)
+        val file = itemService.getItemImageFile(uuid)
         val response: Response.ResponseBuilder = Response.ok(file)
         response.header("Content-Disposition", "attachment; filename=$file")
         return response.build()
+    }
+
+    @DELETE
+    @Path("/image/{uuid}")
+    @ResponseStatus(HttpStatus.SC_NO_CONTENT)
+    fun deleteItemImage(
+        @RestPath uuid: UUID
+    ): Response {
+        itemService.deleteItemImage(uuid, getUserUuid())
+
+        return Response.noContent().build()
+    }
+
+    @GET
+    @Path("/booking")
+    fun getMyItemBookings(
+        @QueryParam("pageNumber") @Min(0) pageNumber: Int?,
+        @QueryParam("pageSize") @Range(min = 1, max = 100) pageSize: Int?,
+        @QueryParam("sortBy") sortBy: ItemBookingSortBy?,
+        @QueryParam("sortDirection") sortDirection: Sort.Direction?,
+    ): PageDto<ItemBookingDto> {
+        val userUuid = getUserUuid()
+        val itemBookingsPage = itemService.getItemBookingsPageOfUser(
+            userUuid,
+            PageConfig(pageNumber, pageSize),
+            sortBy,
+            sortDirection
+        )
+        return PageDto.of(itemBookingsPage, ::ItemBookingDto)
+    }
+
+    @GET
+    @Path("/{uuid}/booking")
+    fun getItemBookingsOfItem(
+        @RestPath uuid: UUID,
+        @QueryParam("pageNumber") @Min(0) pageNumber: Int?,
+        @QueryParam("pageSize") @Range(min = 1, max = 100) pageSize: Int?,
+        @QueryParam("sortBy") sortBy: ItemBookingSortBy?,
+        @QueryParam("sortDirection") sortDirection: Sort.Direction?,
+    ): PageDto<ItemBookingDto> {
+        val userUuid = getUserUuid()
+        val itemBookingsPage = itemService.getItemBookingsPageOfItem(
+            userUuid,
+            uuid,
+            PageConfig(pageNumber, pageSize),
+            sortBy,
+            sortDirection
+        )
+        return PageDto.of(itemBookingsPage, ::ItemBookingDto)
+    }
+
+    @GET
+    @Path("/booking/{uuid}")
+    fun getItemBooking(
+        @RestPath uuid: UUID
+    ): ItemBookingDto {
+        val userUuid = getUserUuid()
+        val itemBookingModel = itemService.getItemBooking(userUuid, uuid)
+        return ItemBookingDto(itemBookingModel)
+    }
+
+    @POST
+    @ResponseStatus(HttpStatus.SC_CREATED)
+    @Path("/{uuid}/booking")
+    fun bookItem(
+        @RestPath uuid: UUID,
+        itemBookingRequestDto: ItemBookingRequestDto
+    ): Response {
+        val userUuid = getUserUuid()
+
+        val itemBookingModel = itemService.bookItem(
+            itemUuid = uuid,
+            userUuid = userUuid,
+            startAt = itemBookingRequestDto.startAt,
+            endAt = itemBookingRequestDto.endAt
+        )
+        return Response.created(URI.create("/booking/${itemBookingModel.uuid}")).build()
     }
 
     private fun getUserUuid(): UUID {

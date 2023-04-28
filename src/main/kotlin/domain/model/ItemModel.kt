@@ -1,5 +1,6 @@
 package domain.model
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import common.ItemCategory
 import infrastructure.entity.Item
 import java.time.OffsetDateTime
@@ -16,7 +17,7 @@ data class ItemModel(
     var communityUuid: UUID,
     var userUuid: UUID,
     var isActive: Boolean = true,
-    var availability: String?,
+    var availability: List<TimeIntervalModel>,
     var availableUntil: OffsetDateTime? = null,
     var description: String?,
     var communityModel: CommunityModel? = null
@@ -33,7 +34,9 @@ data class ItemModel(
         communityUuid = item.communityUuid,
         userUuid = item.userUuid,
         isActive = item.isActive,
-        availability = item.availability,
+        availability = item.availability?.let {
+            TimeIntervalModel.parseJsonString(it)
+        } ?: emptyList(),
         availableUntil = item.availableUntil,
         description = item.description,
         communityModel = if (item.community != null) CommunityModel(item.community!!) else null
@@ -51,7 +54,7 @@ data class ItemModel(
             communityUuid,
             userUuid,
             isActive,
-            availability,
+            ObjectMapper().writeValueAsString(availability),
             availableUntil,
             description
         )
