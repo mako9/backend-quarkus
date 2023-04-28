@@ -1,14 +1,14 @@
 package testUtils
 
-import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 
 object AssertUtil {
     fun assertOffsetDateTimeEquals(expected: OffsetDateTime?, actual: OffsetDateTime?) {
-        assertEquals(
-            expected?.withOffsetSameInstant(ZoneOffset.UTC),
-            actual?.withOffsetSameInstant(ZoneOffset.UTC)
+        assertTrue(
+            expected?.withOffsetSameInstant(ZoneOffset.UTC)
+                ?.isEqual(actual?.withOffsetSameInstant(ZoneOffset.UTC)) == true
         )
     }
 }
