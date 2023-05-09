@@ -7,7 +7,6 @@ import domain.model.sort.ItemBookingSortBy
 import domain.model.sort.ItemSortBy
 import domain.service.CommunityService
 import domain.service.ItemService
-import domain.service.UserService
 import io.quarkus.panache.common.Sort
 import jakarta.inject.Inject
 import jakarta.validation.constraints.Min
@@ -15,8 +14,6 @@ import jakarta.ws.rs.*
 import jakarta.ws.rs.core.MediaType
 import jakarta.ws.rs.core.Response
 import org.apache.http.HttpStatus
-import org.eclipse.microprofile.jwt.Claims
-import org.eclipse.microprofile.jwt.JsonWebToken
 import org.eclipse.microprofile.openapi.annotations.media.Content
 import org.eclipse.microprofile.openapi.annotations.media.Schema
 import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody
@@ -31,18 +28,12 @@ import java.util.*
 
 @Path("/user/item")
 @SecurityRequirement(name = "bearerAuth")
-class ItemController {
+class ItemController : Controller() {
     @Inject
     lateinit var itemService: ItemService
 
     @Inject
     lateinit var communityService: CommunityService
-
-    @Inject
-    lateinit var userService: UserService
-
-    @Inject
-    lateinit var jwt: JsonWebToken
 
     @GET
     @Path("/owned")
@@ -268,12 +259,6 @@ class ItemController {
             endAt = itemBookingRequestDto.endAt
         )
         return Response.created(URI.create("/booking/${itemBookingModel.uuid}")).build()
-    }
-
-    private fun getUserUuid(): UUID {
-        val mail = jwt.getClaim<String>(Claims.email)
-        val userModel = userService.getUserByMail(mail) ?: throw NotFoundException("No user for mail $mail")
-        return userModel.uuid
     }
 
     private fun checkCommunity(communityUuid: UUID) {

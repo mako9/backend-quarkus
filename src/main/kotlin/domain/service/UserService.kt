@@ -1,9 +1,11 @@
 package domain.service
 
+import common.JwtUserInfo
 import common.PageConfig
 import common.UserRole
 import domain.model.PageModel
 import domain.model.UserModel
+import domain.model.exception.CustomForbiddenException
 import infrastructure.entity.User
 import io.quarkus.panache.common.Page
 import io.quarkus.panache.common.Parameters
@@ -15,6 +17,19 @@ import java.util.*
 @ApplicationScoped
 @Transactional
 class UserService {
+
+    fun getUserByJwtUserInfo(jwtUserInfo: JwtUserInfo): UserModel {
+        return getUserByMail(jwtUserInfo.mail) ?: try {
+            createUser(
+                jwtUserInfo.mail,
+                jwtUserInfo.firstName,
+                jwtUserInfo.lastName,
+                jwtUserInfo.roles
+            )
+        } catch (e: Exception) {
+            throw CustomForbiddenException("Could not find user from JWT: ${e.message}")
+        }
+    }
 
     fun getUserByUuid(uuid: UUID): UserModel? {
         val user = User.find("uuid", uuid).firstResult() ?: return null

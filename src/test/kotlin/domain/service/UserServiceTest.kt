@@ -1,7 +1,10 @@
 package domain.service
 
+import common.JwtUserInfo
 import common.PageConfig
+import common.UserRole
 import domain.model.UserModel
+import infrastructure.entity.User
 import io.quarkus.test.junit.QuarkusTest
 import io.quarkus.test.junit.TestProfile
 import jakarta.inject.Inject
@@ -25,6 +28,38 @@ class UserServiceTest {
     @AfterEach
     fun afterEach() {
         entityUtil.deleteAllData()
+    }
+
+    @Test
+    fun `when retrieving existing user by JwtUserInfo, then correct user model is returned`() {
+        val user = entityUtil.setupUser()
+        val jwtUserInfo = JwtUserInfo(user.mail, user.firstName, user.lastName, user.roles.toList())
+        val fetchedUser = userService.getUserByJwtUserInfo(jwtUserInfo)
+        assertEquals(user.uuid, fetchedUser.uuid)
+        assertEquals(user.firstName, fetchedUser.firstName)
+        assertEquals(user.lastName, fetchedUser.lastName)
+        assertEquals(user.mail, fetchedUser.mail)
+        assertEquals(user.street, fetchedUser.street)
+        assertEquals(user.houseNumber, fetchedUser.houseNumber)
+        assertEquals(user.postalCode, fetchedUser.postalCode)
+        assertEquals(user.city, fetchedUser.city)
+        assertEquals(user.roles.toList(), fetchedUser.roles)
+    }
+
+    @Test
+    fun `when retrieving non-existing user by JwtUserInfo, then correct user model is returned and user is created`() {
+        val jwtUserInfo = JwtUserInfo("mail@mail.tld", "John", "Doe", listOf(UserRole.USER))
+        val fetchedUser = userService.getUserByJwtUserInfo(jwtUserInfo)
+        assertEquals(jwtUserInfo.firstName, fetchedUser.firstName)
+        assertEquals(jwtUserInfo.lastName, fetchedUser.lastName)
+        assertEquals(jwtUserInfo.mail, fetchedUser.mail)
+        assertEquals(jwtUserInfo.roles.toList(), fetchedUser.roles)
+
+        val persistedUser = User.find("uuid", fetchedUser.uuid).firstResult()
+        assertEquals(persistedUser?.firstName, fetchedUser.firstName)
+        assertEquals(persistedUser?.lastName, fetchedUser.lastName)
+        assertEquals(persistedUser?.mail, fetchedUser.mail)
+        assertEquals(persistedUser?.roles?.toList(), fetchedUser.roles)
     }
 
     @Test

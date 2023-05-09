@@ -1,7 +1,5 @@
-package domain.service.model
+package domain.model
 
-import domain.model.TimeIntervalModel
-import domain.model.containsDates
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import java.time.OffsetDateTime
