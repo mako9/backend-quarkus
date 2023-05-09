@@ -2,17 +2,13 @@ package api.controller
 
 import api.dto.UserDto
 import api.dto.UserPatchDto
-import common.UserRole
-import domain.service.UserService
-import io.quarkus.security.identity.SecurityIdentity
-import jakarta.inject.Inject
+import common.JwtUserInfo
 import jakarta.ws.rs.GET
 import jakarta.ws.rs.PATCH
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.core.Response
 import org.apache.http.HttpStatus
 import org.eclipse.microprofile.jwt.Claims
-import org.eclipse.microprofile.jwt.JsonWebToken
 import org.eclipse.microprofile.openapi.annotations.enums.SecuritySchemeType
 import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement
 import org.eclipse.microprofile.openapi.annotations.security.SecurityScheme
@@ -26,29 +22,13 @@ import org.eclipse.microprofile.openapi.annotations.security.SecurityScheme
 )
 @Path("/user")
 @SecurityRequirement(name = "bearerAuth")
-class UserController {
-    @Inject
-    lateinit var userService: UserService
-
-    @Inject
-    lateinit var keycloakSecurityContext: SecurityIdentity
-
-    @Inject
-    lateinit var jwt: JsonWebToken
+class UserController : Controller() {
 
     @GET
     @Path("/me")
     fun getOwnUser(): UserDto {
-        val mail = jwt.getClaim<String>(Claims.email)
-        val userModel = userService.getUserByMail(mail)
-        if (userModel != null) return UserDto(userModel)
-        val createdUserModel = userService.createUser(
-            mail,
-            jwt.getClaim(Claims.given_name),
-            jwt.getClaim(Claims.family_name),
-            keycloakSecurityContext.roles.mapNotNull { UserRole.valueOf(it.uppercase()) }
-        )
-        return UserDto(createdUserModel)
+        val jwtUserInfo = JwtUserInfo(jwt, keycloakSecurityContext)
+        return UserDto(userService.getUserByJwtUserInfo(jwtUserInfo))
     }
 
     @PATCH

@@ -7,15 +7,12 @@ import domain.model.sort.CommunitySortBy
 import domain.model.sort.ItemSortBy
 import domain.service.CommunityService
 import domain.service.ItemService
-import domain.service.UserService
 import io.quarkus.panache.common.Sort
 import jakarta.inject.Inject
 import jakarta.validation.constraints.Min
 import jakarta.ws.rs.*
 import jakarta.ws.rs.core.Response
 import org.apache.http.HttpStatus
-import org.eclipse.microprofile.jwt.Claims
-import org.eclipse.microprofile.jwt.JsonWebToken
 import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement
 import org.hibernate.validator.constraints.Range
 import org.jboss.resteasy.reactive.ResponseStatus
@@ -24,18 +21,12 @@ import java.util.*
 
 @Path("/user/community")
 @SecurityRequirement(name = "bearerAuth")
-class CommunityController {
+class CommunityController : Controller() {
     @Inject
     lateinit var communityService: CommunityService
 
     @Inject
     lateinit var itemService: ItemService
-
-    @Inject
-    lateinit var userService: UserService
-
-    @Inject
-    lateinit var jwt: JsonWebToken
 
     @GET
     @Path("/")
@@ -263,11 +254,5 @@ class CommunityController {
     private fun checkUserAdminRight(communityModel: CommunityModel) {
         val userUuid = getUserUuid()
         if (communityModel.adminUuid != userUuid) throw ForbiddenException("Not an admin user of this community")
-    }
-
-    private fun getUserUuid(): UUID {
-        val mail = jwt.getClaim<String>(Claims.email)
-        val userModel = userService.getUserByMail(mail) ?: throw NotFoundException("No user for mail $mail")
-        return userModel.uuid
     }
 }
