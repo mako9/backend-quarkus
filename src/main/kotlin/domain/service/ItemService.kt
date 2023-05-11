@@ -103,10 +103,17 @@ class ItemService {
         return ItemModel(item)
     }
 
+    @Transactional
     fun deleteItem(uuid: UUID, userUuid: UUID) {
         val item = getItemByUuid(uuid) ?: throw EntityNotFoundException("No item for UUID: $uuid")
         checkUserRight(userUuid, item)
+        val imageUuids = getImageUuids(uuid)
+        ItemImage.delete("uuid IN ?1", imageUuids)
         item.delete()
+        val itemImages = ItemImage.find("uuid IN ?1", imageUuids).list()
+        itemImages.forEach {
+            Files.deleteIfExists(Path(it.path))
+        }
     }
 
     fun getImageUuids(itemUuid: UUID): List<UUID> {

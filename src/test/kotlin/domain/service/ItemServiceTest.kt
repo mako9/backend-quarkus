@@ -196,9 +196,11 @@ class ItemServiceTest {
 
     @Test
     fun `when deleting item, then item is not persisted anymore`() {
+        val itemImage = entityUtil.setupItemImage { it.itemUuid = itemOne.uuid }
         itemService.deleteItem(itemOne.uuid, user.uuid)
 
         assertNull(Item.find("uuid", itemOne.uuid).firstResult())
+        assertNull(ItemImage.find("uuid", itemImage.uuid).firstResult())
     }
 
     @Test
