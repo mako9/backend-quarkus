@@ -13,7 +13,8 @@ data class ItemDto(
     val name: String,
     var categories: List<ItemCategory>,
     var communityUuid: UUID,
-    var communityName: String?
+    var communityName: String?,
+    var firstImageUuid: UUID? = null
 ) {
     constructor(itemModel: ItemModel) : this(
         uuid = itemModel.uuid,

@@ -226,6 +226,19 @@ class ItemServiceTest {
     }
 
     @Test
+    fun `when getting newest image UUID for items, then list of pair of UUIDs is returned`() {
+        val itemImageOne = entityUtil.setupItemImage { it.itemUuid = itemOne.uuid }
+        val itemImageTwo = entityUtil.setupItemImage { it.itemUuid = itemOne.uuid }
+        val itemImageThree = entityUtil.setupItemImage { it.itemUuid = itemTwo.uuid }
+
+        val result = itemService.getNewestItemImages(listOf(itemOne.uuid, itemTwo.uuid))
+        assertEquals(2, result.size)
+        assertFalse(result.contains(Pair(itemOne.uuid, itemImageOne.uuid)))
+        assertTrue(result.contains(Pair(itemOne.uuid, itemImageTwo.uuid)))
+        assertTrue(result.contains(Pair(itemTwo.uuid, itemImageThree.uuid)))
+    }
+
+    @Test
     fun `when saving image for item, then Item image entity is created`() {
         val fileUpload = FileUploadMock()
 
