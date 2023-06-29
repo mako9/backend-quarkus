@@ -132,12 +132,12 @@ class ItemService {
         checkUserRight(userUuid, item)
         val path = createImagePath(itemUuid, fileUpload.fileName())
         Files.copy(fileUpload.uploadedFile(), path)
-        val image = ItemImage(
+        val itemImage = ItemImage(
             itemUuid,
             path.pathString
         )
-        ItemImage.persist(image)
-        return image.uuid
+        itemImage.persist()
+        return itemImage.uuid
     }
 
     fun getItemImageFile(uuid: UUID): File {
