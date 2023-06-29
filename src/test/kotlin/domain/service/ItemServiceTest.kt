@@ -196,9 +196,11 @@ class ItemServiceTest {
 
     @Test
     fun `when deleting item, then item is not persisted anymore`() {
+        val itemImage = entityUtil.setupItemImage { it.itemUuid = itemOne.uuid }
         itemService.deleteItem(itemOne.uuid, user.uuid)
 
         assertNull(Item.find("uuid", itemOne.uuid).firstResult())
+        assertNull(ItemImage.find("uuid", itemImage.uuid).firstResult())
     }
 
     @Test
@@ -221,6 +223,19 @@ class ItemServiceTest {
         assertTrue(result.contains(itemImageOne.uuid))
         assertTrue(result.contains(itemImageTwo.uuid))
         assertFalse(result.contains(otherItemImage.uuid))
+    }
+
+    @Test
+    fun `when getting newest image UUID for items, then list of pair of UUIDs is returned`() {
+        val itemImageOne = entityUtil.setupItemImage { it.itemUuid = itemOne.uuid }
+        val itemImageTwo = entityUtil.setupItemImage { it.itemUuid = itemOne.uuid }
+        val itemImageThree = entityUtil.setupItemImage { it.itemUuid = itemTwo.uuid }
+
+        val result = itemService.getNewestItemImages(listOf(itemOne.uuid, itemTwo.uuid))
+        assertEquals(2, result.size)
+        assertFalse(result.contains(Pair(itemOne.uuid, itemImageOne.uuid)))
+        assertTrue(result.contains(Pair(itemOne.uuid, itemImageTwo.uuid)))
+        assertTrue(result.contains(Pair(itemTwo.uuid, itemImageThree.uuid)))
     }
 
     @Test

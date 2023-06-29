@@ -67,7 +67,14 @@ class ItemController : Controller() {
             sortBy,
             sortDirection
         )
-        return PageDto.of(itemModelsPage, ::ItemDto)
+        val itemImageItemUuidPairs = itemService.getNewestItemImages(itemModelsPage.content.map { it.uuid })
+        val pageDto = PageDto.of(itemModelsPage, ::ItemDto)
+
+        for (itemDto in pageDto.content) {
+            itemDto.firstImageUuid = itemImageItemUuidPairs.firstOrNull { it.first == itemDto.uuid }?.second
+        }
+
+        return pageDto
     }
 
     @GET

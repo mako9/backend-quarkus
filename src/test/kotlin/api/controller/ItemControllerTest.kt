@@ -112,6 +112,7 @@ class ItemControllerTest {
     fun `when retrieving paginated items for my communities, then correct page is returned`() {
         val myCommunityTwo = entityUtil.setupCommunity(user.uuid)
         val itemTwo = entityUtil.setupItem { it.name = "bbb"; it.communityUuid = myCommunityTwo.uuid }
+        val itemImage = entityUtil.setupItemImage { it.itemUuid = itemTwo.uuid }
         val jsonPath = RestAssured.given().auth().oauth2(accessToken)
             .contentType(ContentType.JSON)
             .`when`()["/api/user/item/my"]
@@ -121,6 +122,8 @@ class ItemControllerTest {
             .response()
             .jsonPath()
 
+        val expectedItemDtoTwo = ItemDto(ItemModel(Item.find("uuid", itemTwo.uuid).singleResult()))
+        expectedItemDtoTwo.firstImageUuid = itemImage.uuid
         assertEquals(true, jsonPath.getBoolean("firstPage"))
         assertEquals(true, jsonPath.getBoolean("lastPage"))
         assertEquals(0, jsonPath.getInt("pageNumber"))
@@ -130,7 +133,7 @@ class ItemControllerTest {
         assertEquals(
             listOf(
                 ItemDto(ItemModel(Item.find("uuid", item.uuid).singleResult())),
-                ItemDto(ItemModel(Item.find("uuid", itemTwo.uuid).singleResult()))
+                expectedItemDtoTwo
             ),
             jsonPath.getList("content", ItemDto::class.java)
         )

@@ -17,7 +17,6 @@ import infrastructure.entity.ItemImage
 import io.quarkus.panache.common.Page
 import io.quarkus.panache.common.Sort
 import jakarta.enterprise.context.ApplicationScoped
-import jakarta.inject.Inject
 import jakarta.persistence.EntityNotFoundException
 import jakarta.transaction.Transactional
 import org.eclipse.microprofile.config.inject.ConfigProperty
@@ -36,9 +35,6 @@ import kotlin.io.path.pathString
 class ItemService {
     @ConfigProperty(name = "app.storage.item-image.path")
     private lateinit var imagePath: String
-
-    @Inject
-    lateinit var objectMapper: ObjectMapper
 
     fun getItemsPageOfCommunities(
         communityUuids: List<UUID>,
@@ -103,10 +99,17 @@ class ItemService {
         return ItemModel(item)
     }
 
+    @Transactional
     fun deleteItem(uuid: UUID, userUuid: UUID) {
         val item = getItemByUuid(uuid) ?: throw EntityNotFoundException("No item for UUID: $uuid")
         checkUserRight(userUuid, item)
+        val imageUuids = getImageUuids(uuid)
+        ItemImage.delete("uuid IN ?1", imageUuids)
         item.delete()
+        val itemImages = ItemImage.find("uuid IN ?1", imageUuids).list()
+        itemImages.forEach {
+            Files.deleteIfExists(Path(it.path))
+        }
     }
 
     fun getImageUuids(itemUuid: UUID): List<UUID> {
@@ -116,17 +119,25 @@ class ItemService {
         return itemImages.map { it.uuid }
     }
 
+    fun getNewestItemImages(itemUuids: List<UUID>): List<Pair<UUID, UUID>> {
+        val itemImages = ItemImage.find(
+            "FROM ItemImage i WHERE i.itemUuid IN ?1 AND i.createdAt = (SELECT MAX(createdAt) FROM ItemImage WHERE itemUuid = i.itemUuid)",
+            itemUuids
+        ).list()
+        return itemImages.map { Pair(it.itemUuid, it.uuid) }
+    }
+
     fun saveItemImage(itemUuid: UUID, fileUpload: FileUpload, userUuid: UUID): UUID {
         val item = getItemByUuid(itemUuid) ?: throw EntityNotFoundException("No item for UUID: $itemUuid")
         checkUserRight(userUuid, item)
         val path = createImagePath(itemUuid, fileUpload.fileName())
         Files.copy(fileUpload.uploadedFile(), path)
-        val image = ItemImage(
+        val itemImage = ItemImage(
             itemUuid,
             path.pathString
         )
-        ItemImage.persist(image)
-        return image.uuid
+        itemImage.persist()
+        return itemImage.uuid
     }
 
     fun getItemImageFile(uuid: UUID): File {

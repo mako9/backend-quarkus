@@ -3,6 +3,7 @@ package domain.service
 import common.PageConfig
 import domain.model.CommunityModel
 import domain.model.PageModel
+import domain.model.UserCommunityJoinRequestModel
 import domain.model.exception.CustomBadRequestException
 import domain.model.sort.CommunitySortBy
 import infrastructure.entity.Community
@@ -110,14 +111,20 @@ class CommunityService {
         Community.delete("uuid", uuid)
     }
 
-    fun joinCommunity(userUuid: UUID, communityUuid: UUID) {
+    fun joinCommunity(userUuid: UUID, communityUuid: UUID): UserCommunityJoinRequestModel {
         val community =
             getCommunity(communityUuid) ?: throw EntityNotFoundException("No community for UUID: $communityUuid")
         if (!community.canBeJoined) throw CustomBadRequestException(message = "Community can not be joined.")
-        UserCommunityJoinRequest(
-            userUuid,
-            communityUuid
-        ).persist()
+        var request =
+            UserCommunityJoinRequest.find("userUuid = ?1 AND communityUuid = ?2", userUuid, communityUuid).firstResult()
+        if (request == null) {
+            request = UserCommunityJoinRequest(
+                userUuid,
+                communityUuid
+            )
+            request.persist()
+        }
+        return UserCommunityJoinRequestModel(request)
     }
 
     fun leaveCommunity(userUuid: UUID, communityUuid: UUID) {
