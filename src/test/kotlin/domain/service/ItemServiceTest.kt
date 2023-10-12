@@ -95,6 +95,9 @@ class ItemServiceTest {
 
     @Test
     fun `when retrieving paginated items for specific community, then correct page of community models is returned`() {
+        // inactive item should not be returned
+        entityUtil.setupItem { it.name = "Not active"; it.communityUuid = community.uuid; it.isActive = false }
+
         val pageConfig = PageConfig()
         val communityPage =
             itemService.getItemsPageOfCommunities(listOf(community.uuid), user.uuid, pageConfig, null, null)

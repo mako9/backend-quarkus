@@ -47,7 +47,7 @@ class ItemService {
         val sortDirectionValue = sortDirection ?: Sort.Direction.Ascending
         val query = Item
             .find(
-                "communityUuid IN ?1 AND userUuid <> ?2",
+                "communityUuid IN ?1 AND userUuid <> ?2 AND isActive = true",
                 sort = Sort.by(sortByValue, sortDirectionValue),
                 communityUuids,
                 userUuid
