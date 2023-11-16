@@ -30,7 +30,7 @@ class CommunityService {
         val sortDirectionValue = sortDirection ?: Sort.Direction.Ascending
         val query = Community
             .find(
-                query = Community.queryAllByNotUserUuid,
+                query = Community.QUERY_ALL_BY_NOT_USER_ID,
                 sort = Sort.by(sortByValue, sortDirectionValue),
                 userUuid
             )
@@ -48,7 +48,7 @@ class CommunityService {
         val sortDirectionValue = sortDirection ?: Sort.Direction.Ascending
         val query = Community
             .find(
-                query = Community.queryAllByUserUuid,
+                query = Community.QUERY_ALL_BY_USER_ID,
                 sort = Sort.by(sortByValue, sortDirectionValue),
                 userUuid
             )

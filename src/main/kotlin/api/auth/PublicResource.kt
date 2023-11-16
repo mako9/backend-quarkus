@@ -7,6 +7,6 @@ import jakarta.ws.rs.Path
 class PublicResource {
     @GET
     fun serve() {
-        // no-op
+        print("no-op")
     }
 }

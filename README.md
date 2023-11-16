@@ -4,7 +4,10 @@ Initially based on Quarkus starter project: https://github.com/quarkusio/quarkus
 
 ## Architecture
 
-The application is based on [Clean Architecture](https://www.freecodecamp.org/news/a-quick-introduction-to-clean-architecture-990c014448d2/) principles:
+The application is based
+on [Clean Architecture](https://www.freecodecamp.org/news/a-quick-introduction-to-clean-architecture-990c014448d2/)
+principles:
+
 ````
 _____________________
 |                   |
@@ -38,10 +41,22 @@ The authorization of this application is based on the following principles / com
 - Bearer token authentication
 
 This application uses RBAC (Role-Based Access Control) to secure endpoints only for granted users.
-The endpoints are protected and can only be accessed if a client is sending a bearer token along with the request, which must be valid (e.g.: signature, expiration and audience) and trusted by the application.
-The bearer token is issued by a Keycloak Server and represents the subject to which the token was issued for. For being an OAuth 2.0 Authorization Server, the token also references the client acting on behalf of the user.
+The endpoints are protected and can only be accessed if a client is sending a bearer token along with the request, which
+must be valid (e.g.: signature, expiration and audience) and trusted by the application.
+The bearer token is issued by a Keycloak Server and represents the subject to which the token was issued for. For being
+an OAuth 2.0 Authorization Server, the token also references the client acting on behalf of the user.
 
 To configure authorization policies for dev / test go to [quarkus-realm.json](/config/quarkus-realm.json).
+
+### Starting local Keycloak server for development
+
+To run the previously described Keycloak server for local development you can run the following command:
+
+> docker run -p 8180:8080 -e KEYCLOAK_ADMIN=admin -e KEYCLOAK_ADMIN_PASSWORD=admin --name quarkus_keycloak --rm -v
+> ./config:
+> /opt/keycloak/data/import quay.io/keycloak/keycloak:20.0.3 start-dev --import-realm
+
+> **_NOTE:_**  You can only start the Quarkus application locally when a Keycloak server exists.
 
 ## OpenAPI
 
@@ -59,23 +74,25 @@ Please refer to below listed Requirements to setup application
 ### Migration
 
 For database deployment and migration the [Liquibase](https://www.liquibase.org/) framework is used.
-To configure consistent database changes you have to create a new `changeset` in [/changelog](/src/main/resources/db/changelog) directory. Please refer to the [Liquibase documentation](https://docs.liquibase.com/home.html).  
+To configure consistent database changes you have to create a new `changeset`
+in [/changelog](/src/main/resources/db/changelog) directory. Please refer to
+the [Liquibase documentation](https://docs.liquibase.com/home.html).
 
 
 ---------------------------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------------------------
-
 
 ## Setup instructions
 
 While the code is surprisingly simple, under the hood this is using:
- - RESTEasy to expose the REST endpoints
- - Hibernate ORM with Panache and Kotlin to perform the CRUD operations on the database
- - A PostgreSQL database; see below to run one via Docker
- - ArC, the CDI inspired dependency injection tool with zero overhead
- - The high performance Agroal connection pool
- - Infinispan based caching
- - All safely coordinated by the Narayana Transaction Manager
+
+- RESTEasy to expose the REST endpoints
+- Hibernate ORM with Panache and Kotlin to perform the CRUD operations on the database
+- A PostgreSQL database; see below to run one via Docker
+- ArC, the CDI inspired dependency injection tool with zero overhead
+- The high performance Agroal connection pool
+- Infinispan based caching
+- All safely coordinated by the Narayana Transaction Manager
 
 ### Requirements
 
@@ -123,9 +140,11 @@ First compile it:
 
 > ./mvnw package
 
-Next we need to make sure you have a PostgreSQL instance running (Quarkus automatically starts one for dev and test mode). To set up a PostgreSQL database with Docker:
+Next we need to make sure you have a PostgreSQL instance running (Quarkus automatically starts one for dev and test
+mode). To set up a PostgreSQL database with Docker:
 
-> docker run -it --rm=true --name quarkus_test -e POSTGRES_USER=quarkus_test -e POSTGRES_PASSWORD=quarkus_test -e POSTGRES_DB=quarkus_test -p 5432:5432 postgres:13.3
+> docker run -it --rm=true --name quarkus_test -e POSTGRES_USER=quarkus_test -e POSTGRES_PASSWORD=quarkus_test -e
+> POSTGRES_DB=quarkus_test -p 5432:5432 postgres:13.3
 
 Connection properties for the Agroal datasource are defined in the standard Quarkus configuration file,
 `src/main/resources/application.properties`.
@@ -162,7 +181,8 @@ After getting a cup of coffee, you'll be able to run this binary directly:
 
 N.B. This implies all dependencies have been compiled to native;
 that's a whole lot of stuff: from the bytecode enhancements that Panache
-applies to your entities, to the lower level essential components such as the PostgreSQL JDBC driver, the Undertow webserver.
+applies to your entities, to the lower level essential components such as the PostgreSQL JDBC driver, the Undertow
+webserver.
 
 ### See the demo in your browser
 
@@ -177,7 +197,7 @@ Have fun, and join the team of contributors!
 This section provides extra information for running both the database and the demo on Kubernetes.
 As well as running the DB on Kubernetes, a service needs to be exposed for the demo to connect to the DB.
 
-Then, rebuild demo docker image with a system property that points to the DB. 
+Then, rebuild demo docker image with a system property that points to the DB.
 
 ```bash
 -Dquarkus.datasource.jdbc.url=jdbc:postgresql://<DB_SERVICE_NAME>/quarkus_test
