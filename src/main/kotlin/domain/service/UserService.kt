@@ -46,7 +46,7 @@ class UserService {
         return UserModel(user)
     }
 
-    fun createUser(mail: String, firstName: String, lastName: String, roles: List<UserRole>): UserModel {
+    private fun createUser(mail: String, firstName: String, lastName: String, roles: List<UserRole>): UserModel {
         val userModel = UserModel(
             uuid = UUID.randomUUID(),
             firstName = firstName,

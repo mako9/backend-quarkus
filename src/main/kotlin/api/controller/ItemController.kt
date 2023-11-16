@@ -14,14 +14,16 @@ import jakarta.ws.rs.*
 import jakarta.ws.rs.core.MediaType
 import jakarta.ws.rs.core.Response
 import org.apache.http.HttpStatus
+import org.eclipse.microprofile.openapi.annotations.enums.SchemaType
 import org.eclipse.microprofile.openapi.annotations.media.Content
 import org.eclipse.microprofile.openapi.annotations.media.Schema
 import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody
 import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement
 import org.hibernate.validator.constraints.Range
-import org.jboss.resteasy.annotations.providers.multipart.MultipartForm
 import org.jboss.resteasy.reactive.ResponseStatus
+import org.jboss.resteasy.reactive.RestForm
 import org.jboss.resteasy.reactive.RestPath
+import org.jboss.resteasy.reactive.multipart.FileUpload
 import java.net.URI
 import java.util.*
 
@@ -167,14 +169,14 @@ class ItemController : Controller() {
     @RequestBody(
         content = [Content(
             mediaType = MediaType.MULTIPART_FORM_DATA,
-            schema = Schema(implementation = MultipartDto::class)
+            schema = Schema(type = SchemaType.STRING, format = "binary")
         )]
     )
     fun uploadImages(
         @RestPath uuid: UUID,
-        @MultipartForm multipartDto: MultipartDto
+        @RestForm("file") file: FileUpload
     ): Response {
-        val imageUuid = itemService.saveItemImage(uuid, multipartDto.file, getUserUuid())
+        val imageUuid = itemService.saveItemImage(uuid, file, getUserUuid())
 
         return Response.created(URI.create("/image/${imageUuid}")).build()
     }
