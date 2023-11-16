@@ -13,12 +13,12 @@ import java.util.*
 @Cacheable
 class Community : PanacheEntityBase {
     companion object : PanacheCompanion<Community> {
-        const val queryAllByNotUserUuid = "SELECT c FROM Community c " +
+        const val QUERY_ALL_BY_NOT_USER_ID = "SELECT c FROM Community c " +
                 "LEFT JOIN UserCommunityRelation ucr " +
                 "ON c.uuid = ucr.communityUuid " +
                 "WHERE ucr IS NULL OR ucr.userUuid <> ?1"
 
-        const val queryAllByUserUuid = "SELECT c FROM Community c " +
+        const val QUERY_ALL_BY_USER_ID = "SELECT c FROM Community c " +
                 "JOIN UserCommunityRelation ucr " +
                 "ON c.uuid = ucr.communityUuid " +
                 "WHERE ucr.userUuid = ?1"
