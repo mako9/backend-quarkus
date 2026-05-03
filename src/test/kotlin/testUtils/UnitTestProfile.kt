@@ -9,7 +9,7 @@ class UnitTestProfile : QuarkusTestProfile {
     override fun getConfigOverrides(): MutableMap<String, String> {
         return mutableMapOf(
             "quarkus.oidc.auth-server-url" to "http://localhost:8180/realms/quarkus",
-            "quarkus.keycloak.policy-enforcer.enable" to "false",
+            "quarkus.keycloak.policy-enforcer.enabled" to "false",
             "quarkus.keycloak.devservices.enabled" to "false"
         )
     }

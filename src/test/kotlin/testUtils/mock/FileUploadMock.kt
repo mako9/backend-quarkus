@@ -1,5 +1,6 @@
 package testUtils.mock
 
+import jakarta.ws.rs.core.MultivaluedMap
 import org.jboss.resteasy.reactive.multipart.FileUpload
 import java.io.File
 import java.nio.file.Path
@@ -35,5 +36,9 @@ class FileUploadMock : FileUpload {
 
     override fun charSet(): String {
         return "utf-8"
+    }
+
+    override fun getHeaders(): MultivaluedMap<String, String> {
+        return jakarta.ws.rs.core.MultivaluedHashMap()
     }
 }

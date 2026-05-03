@@ -181,8 +181,8 @@ class ItemServiceTest {
         val result = itemService.updateItem(itemModel)
 
         assertEquals(itemModel.name, result.name)
-        assertTrue(itemOne.updatedAt > itemOne.createdAt)
-        assertNotNull(Item.find("uuid", itemModel.uuid).firstResult())
+        val updatedItem = Item.find("uuid", itemOne.uuid).singleResult()
+        assertTrue(updatedItem.updatedAt > itemOne.createdAt)
     }
 
     @Test

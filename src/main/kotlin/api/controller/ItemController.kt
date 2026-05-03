@@ -13,7 +13,6 @@ import jakarta.validation.constraints.Min
 import jakarta.ws.rs.*
 import jakarta.ws.rs.core.MediaType
 import jakarta.ws.rs.core.Response
-import org.apache.http.HttpStatus
 import org.eclipse.microprofile.openapi.annotations.enums.SchemaType
 import org.eclipse.microprofile.openapi.annotations.media.Content
 import org.eclipse.microprofile.openapi.annotations.media.Schema
@@ -145,7 +144,7 @@ class ItemController : Controller() {
 
     @DELETE
     @Path("/{uuid}")
-    @ResponseStatus(HttpStatus.SC_NO_CONTENT)
+    @ResponseStatus(204)
     fun deleteItem(
         @RestPath uuid: UUID
     ): Response {
@@ -165,7 +164,7 @@ class ItemController : Controller() {
     @POST
     @Path("/{uuid}/image")
     @Consumes(MediaType.MULTIPART_FORM_DATA)
-    @ResponseStatus(HttpStatus.SC_CREATED)
+    @ResponseStatus(201)
     @RequestBody(
         content = [Content(
             mediaType = MediaType.MULTIPART_FORM_DATA,
@@ -195,7 +194,7 @@ class ItemController : Controller() {
 
     @DELETE
     @Path("/image/{uuid}")
-    @ResponseStatus(HttpStatus.SC_NO_CONTENT)
+    @ResponseStatus(204)
     fun deleteItemImage(
         @RestPath uuid: UUID
     ): Response {
@@ -253,7 +252,7 @@ class ItemController : Controller() {
     }
 
     @POST
-    @ResponseStatus(HttpStatus.SC_CREATED)
+    @ResponseStatus(201)
     @Path("/{uuid}/booking")
     fun bookItem(
         @RestPath uuid: UUID,

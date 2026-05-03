@@ -36,7 +36,7 @@ class EntityUtil {
             listOf(UserRole.USER)
         )
         intercept(user)
-        user.persist()
+        user.persistAndFlush()
         return user
     }
 
@@ -59,9 +59,12 @@ class EntityUtil {
         if (User.find("uuid", community.adminUuid).firstResult() == null) {
             setupUser { it.uuid = community.adminUuid }
         }
-        community.persist()
+        community.persistAndFlush()
         if (userUuid != null) {
-            UserCommunityRelation(userUuid, community.uuid).persist()
+            if (User.find("uuid", userUuid).firstResult() == null) {
+                setupUser { it.uuid = userUuid }
+            }
+            setupUserCommunityRelation { it.userUuid = userUuid; it.communityUuid = community.uuid }
         }
         return community
     }

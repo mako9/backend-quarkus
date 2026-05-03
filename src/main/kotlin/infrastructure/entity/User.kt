@@ -1,8 +1,8 @@
 package infrastructure.entity
 
-import com.vladmihalcea.hibernate.type.array.EnumArrayType
-import com.vladmihalcea.hibernate.type.array.internal.AbstractArrayType
 import common.UserRole
+import io.hypersistence.utils.hibernate.type.array.EnumArrayType
+import io.hypersistence.utils.hibernate.type.array.internal.AbstractArrayType
 import io.quarkus.hibernate.orm.panache.kotlin.PanacheCompanion
 import io.quarkus.hibernate.orm.panache.kotlin.PanacheEntityBase
 import jakarta.persistence.*
@@ -62,10 +62,10 @@ class User : PanacheEntityBase {
     @Column(name = "updated_at")
     lateinit var updatedAt: OffsetDateTime
 
-    @Column
+    @Column(name = "roles", columnDefinition = "_user_role")
     @Type(
         value = EnumArrayType::class,
-        parameters = [Parameter(value = "user_role", name = AbstractArrayType.SQL_ARRAY_TYPE)]
+        parameters = [Parameter(name = AbstractArrayType.SQL_ARRAY_TYPE, value = "user_role")]
     )
     lateinit var roles: Array<UserRole>
 

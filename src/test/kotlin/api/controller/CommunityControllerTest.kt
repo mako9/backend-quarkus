@@ -14,8 +14,10 @@ import infrastructure.entity.User
 import io.quarkus.panache.common.Sort
 import io.quarkus.test.junit.QuarkusTest
 import io.quarkus.test.keycloak.client.KeycloakTestClient
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.restassured.RestAssured
 import io.restassured.http.ContentType
+import io.restassured.path.json.config.JsonPathConfig
 import jakarta.inject.Inject
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
@@ -31,9 +33,12 @@ class CommunityControllerTest {
     private val keycloakClient = KeycloakTestClient()
     private val accessToken = keycloakClient.getAccessToken("alice")
     private lateinit var user: User
+    private val kotlinJsonPathConfig = JsonPathConfig.jsonPathConfig()
+        .jackson2ObjectMapperFactory { _, _ -> jacksonObjectMapper().findAndRegisterModules() }
 
     @BeforeEach
     fun beforeEach() {
+        entityUtil.deleteAllData()
         user = entityUtil.setupUser { it.mail = "alice@test.tld" }
     }
 
@@ -56,8 +61,8 @@ class CommunityControllerTest {
             .response()
             .jsonPath()
 
-        assertEquals(true, jsonPath.getBoolean("firstPage"))
-        assertEquals(true, jsonPath.getBoolean("lastPage"))
+        assertEquals(true, jsonPath.getBoolean("isFirstPage"))
+        assertEquals(true, jsonPath.getBoolean("isLastPage"))
         assertEquals(0, jsonPath.getInt("pageNumber"))
         assertEquals(50, jsonPath.getInt("pageSize"))
         assertEquals(2, jsonPath.getInt("totalElements"))
@@ -67,7 +72,7 @@ class CommunityControllerTest {
                 CommunityDto(CommunityModel(communityOne)),
                 CommunityDto(CommunityModel(communityTwo))
             ),
-            jsonPath.getList("content", CommunityDto::class.java)
+            jsonPath.using(kotlinJsonPathConfig).getList("content", CommunityDto::class.java)
         )
     }
 
@@ -88,8 +93,8 @@ class CommunityControllerTest {
             .response()
             .jsonPath()
 
-        assertEquals(false, jsonPath.getBoolean("firstPage"))
-        assertEquals(true, jsonPath.getBoolean("lastPage"))
+        assertEquals(false, jsonPath.getBoolean("isFirstPage"))
+        assertEquals(true, jsonPath.getBoolean("isLastPage"))
         assertEquals(pageConfig.pageNumber, jsonPath.getInt("pageNumber"))
         assertEquals(pageConfig.pageSize, jsonPath.getInt("pageSize"))
         assertEquals(2, jsonPath.getInt("totalElements"))
@@ -98,7 +103,7 @@ class CommunityControllerTest {
             listOf(
                 CommunityDto(CommunityModel(communityTwo))
             ),
-            jsonPath.getList("content", CommunityDto::class.java)
+            jsonPath.using(kotlinJsonPathConfig).getList("content", CommunityDto::class.java)
         )
     }
 
@@ -123,7 +128,7 @@ class CommunityControllerTest {
                 CommunityDto(CommunityModel(communityTwo)),
                 CommunityDto(CommunityModel(communityOne))
             ),
-            jsonPath.getList("content", CommunityDto::class.java)
+            jsonPath.using(kotlinJsonPathConfig).getList("content", CommunityDto::class.java)
         )
     }
 
@@ -145,7 +150,7 @@ class CommunityControllerTest {
             listOf(
                 CommunityDto(CommunityModel(communityOne))
             ),
-            jsonPath.getList("content", CommunityDto::class.java)
+            jsonPath.using(kotlinJsonPathConfig).getList("content", CommunityDto::class.java)
         )
     }
 
@@ -167,7 +172,7 @@ class CommunityControllerTest {
             listOf(
                 CommunityDto(CommunityModel(communityOne))
             ),
-            jsonPath.getList("content", CommunityDto::class.java)
+            jsonPath.using(kotlinJsonPathConfig).getList("content", CommunityDto::class.java)
         )
     }
 
@@ -196,7 +201,7 @@ class CommunityControllerTest {
         assertEquals(user.firstName, jsonPath.getString("adminFirstName"))
         assertEquals(user.lastName, jsonPath.getString("adminLastName"))
         assertEquals(community.canBeJoined, jsonPath.getBoolean("canBeJoined"))
-        assertTrue(jsonPath.getBoolean("admin"))
+        assertTrue(jsonPath.getBoolean("isAdmin"))
         assertFalse(jsonPath.getBoolean("hasRequestedMembership"))
     }
 
@@ -215,7 +220,7 @@ class CommunityControllerTest {
 
         assertEquals(requestDto.name, jsonPath.getString("name"))
         assertEquals(11, jsonPath.getInt("radius"))
-        assertTrue(jsonPath.getBoolean("admin"))
+        assertTrue(jsonPath.getBoolean("isAdmin"))
     }
 
     @Test
@@ -306,8 +311,8 @@ class CommunityControllerTest {
             .response()
             .jsonPath()
 
-        assertEquals(true, jsonPath.getBoolean("firstPage"))
-        assertEquals(true, jsonPath.getBoolean("lastPage"))
+        assertEquals(true, jsonPath.getBoolean("isFirstPage"))
+        assertEquals(true, jsonPath.getBoolean("isLastPage"))
         assertEquals(0, jsonPath.getInt("pageNumber"))
         assertEquals(50, jsonPath.getInt("pageSize"))
         assertEquals(2, jsonPath.getInt("totalElements"))
@@ -317,7 +322,7 @@ class CommunityControllerTest {
                 MinimalUserDto(UserModel(userOne)),
                 MinimalUserDto(UserModel(userTwo))
             ),
-            jsonPath.getList("content", MinimalUserDto::class.java)
+            jsonPath.using(kotlinJsonPathConfig).getList("content", MinimalUserDto::class.java)
         )
     }
 
@@ -393,7 +398,7 @@ class CommunityControllerTest {
             listOf(
                 MinimalUserDto(UserModel(userOne))
             ),
-            jsonPath.getList("", MinimalUserDto::class.java)
+            jsonPath.using(kotlinJsonPathConfig).getList("", MinimalUserDto::class.java)
         )
     }
 
@@ -475,8 +480,8 @@ class CommunityControllerTest {
             .response()
             .jsonPath()
 
-        assertEquals(true, jsonPath.getBoolean("firstPage"))
-        assertEquals(true, jsonPath.getBoolean("lastPage"))
+        assertEquals(true, jsonPath.getBoolean("isFirstPage"))
+        assertEquals(true, jsonPath.getBoolean("isLastPage"))
         assertEquals(0, jsonPath.getInt("pageNumber"))
         assertEquals(50, jsonPath.getInt("pageSize"))
         assertEquals(2, jsonPath.getInt("totalElements"))
@@ -486,7 +491,7 @@ class CommunityControllerTest {
                 ItemDto(ItemModel(Item.find("uuid", itemOne.uuid).singleResult())),
                 ItemDto(ItemModel(Item.find("uuid", itemTwo.uuid).singleResult()))
             ),
-            jsonPath.getList("content", ItemDto::class.java)
+            jsonPath.using(kotlinJsonPathConfig).getList("content", ItemDto::class.java)
         )
     }
 
