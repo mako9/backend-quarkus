@@ -34,5 +34,13 @@ pom.xml.releaseBackup
 pom.xml.versionsBackup
 release.properties
 
-# uploaded image files
+# Quarkus generated
+META-INF/
+io/
+
+# Tools
+.claude/
+docs/superpowers/
+
+# Misc
 item-image/

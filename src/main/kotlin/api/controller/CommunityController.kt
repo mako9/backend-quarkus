@@ -12,7 +12,6 @@ import jakarta.inject.Inject
 import jakarta.validation.constraints.Min
 import jakarta.ws.rs.*
 import jakarta.ws.rs.core.Response
-import org.apache.http.HttpStatus
 import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement
 import org.hibernate.validator.constraints.Range
 import org.jboss.resteasy.reactive.ResponseStatus
@@ -144,7 +143,7 @@ class CommunityController : Controller() {
 
     @DELETE
     @Path("/{uuid}")
-    @ResponseStatus(HttpStatus.SC_NO_CONTENT)
+    @ResponseStatus(204)
     fun deleteCommunity(
         @RestPath uuid: UUID
     ): Response {
@@ -169,7 +168,7 @@ class CommunityController : Controller() {
 
     @GET
     @Path("/{uuid}/join")
-    @ResponseStatus(HttpStatus.SC_NO_CONTENT)
+    @ResponseStatus(204)
     fun joinCommunity(
         @RestPath uuid: UUID,
     ): Response {
@@ -180,7 +179,7 @@ class CommunityController : Controller() {
 
     @GET
     @Path("/{uuid}/leave")
-    @ResponseStatus(HttpStatus.SC_NO_CONTENT)
+    @ResponseStatus(204)
     fun leaveCommunity(
         @RestPath uuid: UUID,
     ): Response {
@@ -219,7 +218,7 @@ class CommunityController : Controller() {
 
     @POST
     @Path("/{uuid}/request/decline")
-    @ResponseStatus(HttpStatus.SC_NO_CONTENT)
+    @ResponseStatus(204)
     fun declineJoinRequests(
         @RestPath uuid: UUID,
         userUuids: List<UUID>

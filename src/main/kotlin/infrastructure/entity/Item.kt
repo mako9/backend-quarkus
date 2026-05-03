@@ -1,8 +1,8 @@
 package infrastructure.entity
 
-import com.vladmihalcea.hibernate.type.array.EnumArrayType
-import com.vladmihalcea.hibernate.type.array.internal.AbstractArrayType
 import common.ItemCategory
+import io.hypersistence.utils.hibernate.type.array.EnumArrayType
+import io.hypersistence.utils.hibernate.type.array.internal.AbstractArrayType
 import io.quarkus.hibernate.orm.panache.kotlin.PanacheCompanion
 import io.quarkus.hibernate.orm.panache.kotlin.PanacheEntityBase
 import jakarta.persistence.*
@@ -29,7 +29,7 @@ class Item : PanacheEntityBase {
     @Column
     lateinit var name: String
 
-    @Column
+    @Column(name = "categories", columnDefinition = "_item_category")
     @Type(
         value = EnumArrayType::class,
         parameters = [Parameter(value = "item_category", name = AbstractArrayType.SQL_ARRAY_TYPE)]

@@ -1,13 +1,9 @@
 package api.auth
 
-import io.quarkus.test.junit.QuarkusIntegrationTest
 import io.quarkus.test.junit.QuarkusTest
 import io.quarkus.test.keycloak.client.KeycloakTestClient
 import io.restassured.RestAssured
 import org.junit.jupiter.api.Test
-
-@QuarkusIntegrationTest
-class NativePolicyEnforcerIT : PolicyEnforcerTest()
 
 @QuarkusTest
 class PolicyEnforcerTest {

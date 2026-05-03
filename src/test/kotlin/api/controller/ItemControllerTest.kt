@@ -14,8 +14,10 @@ import infrastructure.entity.User
 import io.quarkus.panache.common.Sort
 import io.quarkus.test.junit.QuarkusTest
 import io.quarkus.test.keycloak.client.KeycloakTestClient
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.restassured.RestAssured
 import io.restassured.http.ContentType
+import io.restassured.path.json.config.JsonPathConfig
 import jakarta.inject.Inject
 import org.eclipse.microprofile.config.inject.ConfigProperty
 import org.junit.jupiter.api.AfterEach
@@ -44,8 +46,12 @@ class ItemControllerTest {
     private lateinit var item: Item
     private lateinit var itemBooking: ItemBooking
 
+    private val kotlinJsonPathConfig = JsonPathConfig.jsonPathConfig()
+        .jackson2ObjectMapperFactory { _, _ -> jacksonObjectMapper().findAndRegisterModules() }
+
     @BeforeEach
     fun beforeEach() {
+        entityUtil.deleteAllData()
         user = entityUtil.setupUser { it.mail = "alice@test.tld" }
         community = entityUtil.setupCommunity()
         val communityOne = entityUtil.setupCommunity(user.uuid)
@@ -76,8 +82,8 @@ class ItemControllerTest {
             .response()
             .jsonPath()
 
-        assertEquals(true, jsonPath.getBoolean("firstPage"))
-        assertEquals(true, jsonPath.getBoolean("lastPage"))
+        assertEquals(true, jsonPath.getBoolean("isFirstPage"))
+        assertEquals(true, jsonPath.getBoolean("isLastPage"))
         assertEquals(0, jsonPath.getInt("pageNumber"))
         assertEquals(50, jsonPath.getInt("pageSize"))
         assertEquals(2, jsonPath.getInt("totalElements"))
@@ -87,7 +93,7 @@ class ItemControllerTest {
                 ItemDto(ItemModel(Item.find("uuid", itemOne.uuid).singleResult())),
                 ItemDto(ItemModel(Item.find("uuid", itemTwo.uuid).singleResult()))
             ),
-            jsonPath.getList("content", ItemDto::class.java)
+            jsonPath.using(kotlinJsonPathConfig).getList("content", ItemDto::class.java)
         )
     }
 
@@ -104,7 +110,7 @@ class ItemControllerTest {
 
         assertEquals(
             ItemDetailDto(ItemModel(Item.find("uuid", item.uuid).singleResult())),
-            jsonPath.getObject("", ItemDetailDto::class.java)
+            jsonPath.using(kotlinJsonPathConfig).getObject("", ItemDetailDto::class.java)
         )
     }
 
@@ -124,8 +130,8 @@ class ItemControllerTest {
 
         val expectedItemDtoTwo = ItemDto(ItemModel(Item.find("uuid", itemTwo.uuid).singleResult()))
         expectedItemDtoTwo.firstImageUuid = itemImage.uuid
-        assertEquals(true, jsonPath.getBoolean("firstPage"))
-        assertEquals(true, jsonPath.getBoolean("lastPage"))
+        assertEquals(true, jsonPath.getBoolean("isFirstPage"))
+        assertEquals(true, jsonPath.getBoolean("isLastPage"))
         assertEquals(0, jsonPath.getInt("pageNumber"))
         assertEquals(50, jsonPath.getInt("pageSize"))
         assertEquals(2, jsonPath.getInt("totalElements"))
@@ -135,7 +141,7 @@ class ItemControllerTest {
                 ItemDto(ItemModel(Item.find("uuid", item.uuid).singleResult())),
                 expectedItemDtoTwo
             ),
-            jsonPath.getList("content", ItemDto::class.java)
+            jsonPath.using(kotlinJsonPathConfig).getList("content", ItemDto::class.java)
         )
     }
 
@@ -335,8 +341,8 @@ class ItemControllerTest {
                 .response()
                 .jsonPath()
 
-            assertEquals(true, jsonPath.getBoolean("firstPage"))
-            assertEquals(true, jsonPath.getBoolean("lastPage"))
+            assertEquals(true, jsonPath.getBoolean("isFirstPage"))
+            assertEquals(true, jsonPath.getBoolean("isLastPage"))
             assertEquals(0, jsonPath.getInt("pageNumber"))
             assertEquals(50, jsonPath.getInt("pageSize"))
             assertEquals(2, jsonPath.getInt("totalElements"))
@@ -346,7 +352,7 @@ class ItemControllerTest {
                     ItemBookingDto(ItemBookingModel(ItemBooking.find("uuid", itemBookingTwo.uuid).singleResult())),
                     ItemBookingDto(ItemBookingModel(ItemBooking.find("uuid", itemBooking.uuid).singleResult()))
                 ),
-                jsonPath.getList("content", ItemBookingDto::class.java)
+                jsonPath.using(kotlinJsonPathConfig).getList("content", ItemBookingDto::class.java)
             )
         }
 
@@ -365,8 +371,8 @@ class ItemControllerTest {
                 .response()
                 .jsonPath()
 
-            assertEquals(false, jsonPath.getBoolean("firstPage"))
-            assertEquals(true, jsonPath.getBoolean("lastPage"))
+            assertEquals(false, jsonPath.getBoolean("isFirstPage"))
+            assertEquals(true, jsonPath.getBoolean("isLastPage"))
             assertEquals(1, jsonPath.getInt("pageNumber"))
             assertEquals(1, jsonPath.getInt("pageSize"))
             assertEquals(2, jsonPath.getInt("totalElements"))
@@ -375,7 +381,7 @@ class ItemControllerTest {
                 listOf(
                     ItemBookingDto(ItemBookingModel(ItemBooking.find("uuid", itemBookingTwo.uuid).singleResult()))
                 ),
-                jsonPath.getList("content", ItemBookingDto::class.java)
+                jsonPath.using(kotlinJsonPathConfig).getList("content", ItemBookingDto::class.java)
             )
         }
     }
@@ -399,8 +405,8 @@ class ItemControllerTest {
                 .response()
                 .jsonPath()
 
-            assertEquals(true, jsonPath.getBoolean("firstPage"))
-            assertEquals(true, jsonPath.getBoolean("lastPage"))
+            assertEquals(true, jsonPath.getBoolean("isFirstPage"))
+            assertEquals(true, jsonPath.getBoolean("isLastPage"))
             assertEquals(0, jsonPath.getInt("pageNumber"))
             assertEquals(50, jsonPath.getInt("pageSize"))
             assertEquals(2, jsonPath.getInt("totalElements"))
@@ -410,7 +416,7 @@ class ItemControllerTest {
                     ItemBookingDto(ItemBookingModel(ItemBooking.find("uuid", itemBookingTwo.uuid).singleResult())),
                     ItemBookingDto(ItemBookingModel(ItemBooking.find("uuid", itemBooking.uuid).singleResult()))
                 ),
-                jsonPath.getList("content", ItemBookingDto::class.java)
+                jsonPath.using(kotlinJsonPathConfig).getList("content", ItemBookingDto::class.java)
             )
         }
 
@@ -429,8 +435,8 @@ class ItemControllerTest {
                 .response()
                 .jsonPath()
 
-            assertEquals(false, jsonPath.getBoolean("firstPage"))
-            assertEquals(true, jsonPath.getBoolean("lastPage"))
+            assertEquals(false, jsonPath.getBoolean("isFirstPage"))
+            assertEquals(true, jsonPath.getBoolean("isLastPage"))
             assertEquals(1, jsonPath.getInt("pageNumber"))
             assertEquals(1, jsonPath.getInt("pageSize"))
             assertEquals(2, jsonPath.getInt("totalElements"))
@@ -439,7 +445,7 @@ class ItemControllerTest {
                 listOf(
                     ItemBookingDto(ItemBookingModel(ItemBooking.find("uuid", itemBooking.uuid).singleResult()))
                 ),
-                jsonPath.getList("content", ItemBookingDto::class.java)
+                jsonPath.using(kotlinJsonPathConfig).getList("content", ItemBookingDto::class.java)
             )
         }
     }
@@ -502,5 +508,11 @@ class ItemControllerTest {
             .jsonPath()
 
         assertEquals(listOf(ErrorCode.InvalidInputParam.code), jsonPath.getList("codes", String::class.java))
+    }
+
+    companion object {
+        init {
+            RestAssured.useRelaxedHTTPSValidation()
+        }
     }
 }
