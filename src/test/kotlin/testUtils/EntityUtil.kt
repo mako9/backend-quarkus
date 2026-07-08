@@ -1,6 +1,8 @@
 package testUtils
 
+import common.BookingStatus
 import common.ItemCategory
+import common.NotificationType
 import common.UserRole
 import infrastructure.entity.*
 import jakarta.enterprise.context.ApplicationScoped
@@ -16,6 +18,7 @@ class EntityUtil {
         UserCommunityRelation.deleteAll()
         UserCommunityJoinRequest.deleteAll()
         ItemImage.deleteAll()
+        Notification.deleteAll()
         ItemBooking.deleteAll()
         Item.deleteAll()
         Community.deleteAll()
@@ -139,6 +142,7 @@ class EntityUtil {
             startAt = OffsetDateTime.now(),
             endAt = OffsetDateTime.now().plusDays(1)
         )
+        itemBooking.status = BookingStatus.CONFIRMED
         intercept(itemBooking)
         if (User.find("uuid", itemBooking.userUuid).firstResult() == null) {
             setupUser { it.uuid = itemBooking.userUuid }
@@ -149,5 +153,19 @@ class EntityUtil {
         itemBooking.persist()
 
         return itemBooking
+    }
+
+    fun setupNotification(intercept: (Notification) -> Unit = {}): Notification {
+        val notification = Notification(
+            userUuid = UUID.randomUUID(),
+            type = NotificationType.BOOKING_REQUEST,
+            bookingUuid = null
+        )
+        intercept(notification)
+        if (User.find("uuid", notification.userUuid).firstResult() == null) {
+            setupUser { it.uuid = notification.userUuid }
+        }
+        notification.persist()
+        return notification
     }
 }

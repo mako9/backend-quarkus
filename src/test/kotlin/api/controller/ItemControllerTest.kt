@@ -388,17 +388,25 @@ class ItemControllerTest {
 
     @Test
     fun `when retrieving paginated item bookings per item, then correct page is returned`() {
-        val itemBookingTwo = entityUtil.setupItemBooking {
-            it.itemUuid = item.uuid
-            it.userUuid = user.uuid
-            it.startAt = OffsetDateTime.now().plusDays(2)
-            it.endAt = OffsetDateTime.now().plusDays(3)
+        val ownedItem = entityUtil.setupItem { it.userUuid = user.uuid; it.communityUuid = community.uuid }
+        val requester = entityUtil.setupUser()
+        val bookingOne = entityUtil.setupItemBooking {
+            it.itemUuid = ownedItem.uuid
+            it.userUuid = requester.uuid
+            it.startAt = OffsetDateTime.now().plusDays(1)
+            it.endAt = OffsetDateTime.now().plusDays(2)
+        }
+        val bookingTwo = entityUtil.setupItemBooking {
+            it.itemUuid = ownedItem.uuid
+            it.userUuid = requester.uuid
+            it.startAt = OffsetDateTime.now().plusDays(3)
+            it.endAt = OffsetDateTime.now().plusDays(4)
         }
 
         run {
             val jsonPath = RestAssured.given().auth().oauth2(accessToken)
                 .contentType(ContentType.JSON)
-                .`when`()["/api/user/item/${item.uuid}/booking"]
+                .`when`()["/api/user/item/${ownedItem.uuid}/booking"]
                 .then()
                 .statusCode(200)
                 .extract()
@@ -413,8 +421,8 @@ class ItemControllerTest {
             assertEquals(1, jsonPath.getInt("totalPages"))
             assertEquals(
                 listOf(
-                    ItemBookingDto(ItemBookingModel(ItemBooking.find("uuid", itemBookingTwo.uuid).singleResult())),
-                    ItemBookingDto(ItemBookingModel(ItemBooking.find("uuid", itemBooking.uuid).singleResult()))
+                    ItemBookingDto(ItemBookingModel(ItemBooking.find("uuid", bookingTwo.uuid).singleResult())),
+                    ItemBookingDto(ItemBookingModel(ItemBooking.find("uuid", bookingOne.uuid).singleResult()))
                 ),
                 jsonPath.using(kotlinJsonPathConfig).getList("content", ItemBookingDto::class.java)
             )
@@ -428,7 +436,7 @@ class ItemControllerTest {
                 .queryParam("pageSize", pageConfig.pageSize)
                 .queryParam("sortBy", ItemBookingSortBy.CREATED_AT)
                 .queryParam("sortDirection", Sort.Direction.Descending)
-                .`when`()["/api/user/item/${item.uuid}/booking"]
+                .`when`()["/api/user/item/${ownedItem.uuid}/booking"]
                 .then()
                 .statusCode(200)
                 .extract()
@@ -443,7 +451,7 @@ class ItemControllerTest {
             assertEquals(2, jsonPath.getInt("totalPages"))
             assertEquals(
                 listOf(
-                    ItemBookingDto(ItemBookingModel(ItemBooking.find("uuid", itemBooking.uuid).singleResult()))
+                    ItemBookingDto(ItemBookingModel(ItemBooking.find("uuid", bookingOne.uuid).singleResult()))
                 ),
                 jsonPath.using(kotlinJsonPathConfig).getList("content", ItemBookingDto::class.java)
             )
@@ -460,12 +468,12 @@ class ItemControllerTest {
     }
 
     @Test
-    fun `when booking item, then status 200 and link to item is returned`() {
+    fun `when booking item, then status 201 and booking dto is returned`() {
         val dto = ItemBookingRequestDto(
             startAt = OffsetDateTime.now().plusDays(5),
             endAt = OffsetDateTime.now().plusDays(6)
         )
-        val response = RestAssured.given().auth().oauth2(accessToken)
+        val jsonPath = RestAssured.given().auth().oauth2(accessToken)
             .contentType(ContentType.JSON)
             .body(dto)
             .post("/api/user/item/${item.uuid}/booking")
@@ -473,8 +481,9 @@ class ItemControllerTest {
             .statusCode(201)
             .extract()
             .response()
+            .jsonPath()
 
-        assertTrue(response.header("location").contains("/booking/"))
+        assertTrue(jsonPath.getString("uuid") != null)
     }
 
     @Test

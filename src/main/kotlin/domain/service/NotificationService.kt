@@ -69,6 +69,7 @@ class NotificationService {
         notification.persist()
     }
 
+    @Transactional
     fun markAllRead(userUuid: UUID) {
         Notification.update("read = true WHERE userUuid = ?1", userUuid)
     }
