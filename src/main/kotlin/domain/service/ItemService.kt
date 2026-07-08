@@ -1,7 +1,11 @@
 package domain.service
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import common.BookingStatus
+import common.CancelledBy
+import common.NotificationType
 import common.PageConfig
+import domain.event.BookingEvent
 import domain.model.ItemBookingModel
 import domain.model.ItemModel
 import domain.model.PageModel
@@ -14,9 +18,12 @@ import domain.model.sort.ItemSortBy
 import infrastructure.entity.Item
 import infrastructure.entity.ItemBooking
 import infrastructure.entity.ItemImage
+import infrastructure.entity.User
 import io.quarkus.panache.common.Page
 import io.quarkus.panache.common.Sort
 import jakarta.enterprise.context.ApplicationScoped
+import jakarta.enterprise.event.Event
+import jakarta.inject.Inject
 import jakarta.persistence.EntityNotFoundException
 import jakarta.transaction.Transactional
 import org.eclipse.microprofile.config.inject.ConfigProperty
@@ -35,6 +42,9 @@ import kotlin.io.path.pathString
 class ItemService {
     @ConfigProperty(name = "app.storage.item-image.path")
     private lateinit var imagePath: String
+
+    @Inject
+    lateinit var bookingEventSource: Event<BookingEvent>
 
     fun getItemsPageOfCommunities(
         communityUuids: List<UUID>,
@@ -94,6 +104,7 @@ class ItemService {
         item.isActive = itemModel.isActive
         item.availability = ObjectMapper().writeValueAsString(itemModel.availability)
         item.description = itemModel.description
+        item.requiresApproval = itemModel.requiresApproval
         item.updatedAt = OffsetDateTime.now()
         item.persist()
         return ItemModel(item)
@@ -174,13 +185,14 @@ class ItemService {
         sortBy: ItemBookingSortBy?,
         sortDirection: Sort.Direction?
     ): PageModel<ItemBookingModel> {
+        val item = getItemByUuid(itemUuid) ?: throw EntityNotFoundException("No item for UUID: $itemUuid")
+        if (item.userUuid != userUuid) throw CustomForbiddenException("User is not the owner of item: $itemUuid")
         val sortByValue = sortBy?.value ?: ItemBookingSortBy.END_AT.value
         val sortDirectionValue = sortDirection ?: Sort.Direction.Descending
         val query = ItemBooking
             .find(
-                "userUuid = ?1 AND itemUuid = ?2",
+                "itemUuid = ?1",
                 sort = Sort.by(sortByValue, sortDirectionValue),
-                userUuid,
                 itemUuid
             )
             .page(Page.of(pageConfig.pageNumber, pageConfig.pageSize))
@@ -194,7 +206,10 @@ class ItemService {
         val itemBooking = ItemBooking
             .find("uuid", uuid)
             .firstResult() ?: throw EntityNotFoundException("No item booking for UUID: $uuid")
-        if (itemBooking.userUuid != userUuid) throw CustomForbiddenException("User not allowed to see item booking")
+        val item = getItemByUuid(itemBooking.itemUuid)
+        val isRequester = itemBooking.userUuid == userUuid
+        val isOwner = item?.userUuid == userUuid
+        if (!isRequester && !isOwner) throw CustomBadRequestException(code = ErrorCode.BookingAccessDenied)
         return ItemBookingModel(itemBooking)
     }
 
@@ -203,13 +218,116 @@ class ItemService {
         if (item.userUuid == userUuid) throw CustomBadRequestException(message = "Can not book owned item")
         checkInputDate(startAt, endAt)
         checkItemAvailability(item, startAt, endAt)
+        val status = if (item.requiresApproval) BookingStatus.PENDING else BookingStatus.CONFIRMED
         val itemBooking = ItemBooking(
             itemUuid = itemUuid,
             userUuid = userUuid,
             startAt = startAt,
-            endAt = endAt
+            endAt = endAt,
+            status = status
         )
         itemBooking.persist()
+
+        val requester = User.find("uuid", userUuid).firstResult()
+        val requesterName = "${requester?.firstName ?: ""} ${requester?.lastName ?: ""}".trim()
+        val notificationType = if (status == BookingStatus.PENDING) NotificationType.BOOKING_REQUEST else NotificationType.BOOKING_CONFIRMED
+        val recipientUuid = if (status == BookingStatus.PENDING) item.userUuid else userUuid
+        bookingEventSource.fireAsync(
+            BookingEvent(
+                notificationType = notificationType,
+                recipientUserUuid = recipientUuid,
+                bookingUuid = itemBooking.uuid,
+                itemName = item.name,
+                requesterName = requesterName
+            )
+        )
+
+        return ItemBookingModel(itemBooking)
+    }
+
+    fun approveBooking(bookingUuid: UUID, userUuid: UUID): ItemBookingModel {
+        val itemBooking = ItemBooking.find("uuid", bookingUuid).firstResult()
+            ?: throw EntityNotFoundException("No item booking for UUID: $bookingUuid")
+        val item = getItemByUuid(itemBooking.itemUuid)
+            ?: throw EntityNotFoundException("No item for UUID: ${itemBooking.itemUuid}")
+        if (item.userUuid != userUuid) throw CustomForbiddenException("User is not the owner of item: ${item.uuid}")
+        if (itemBooking.status != BookingStatus.PENDING) throw CustomBadRequestException(code = ErrorCode.BookingNotPending)
+
+        itemBooking.status = BookingStatus.CONFIRMED
+        itemBooking.persist()
+
+        val requester = User.find("uuid", itemBooking.userUuid).firstResult()
+        val requesterName = "${requester?.firstName ?: ""} ${requester?.lastName ?: ""}".trim()
+        bookingEventSource.fireAsync(
+            BookingEvent(
+                notificationType = NotificationType.BOOKING_CONFIRMED,
+                recipientUserUuid = itemBooking.userUuid,
+                bookingUuid = itemBooking.uuid,
+                itemName = item.name,
+                requesterName = requesterName
+            )
+        )
+
+        return ItemBookingModel(itemBooking)
+    }
+
+    fun declineBooking(bookingUuid: UUID, userUuid: UUID): ItemBookingModel {
+        val itemBooking = ItemBooking.find("uuid", bookingUuid).firstResult()
+            ?: throw EntityNotFoundException("No item booking for UUID: $bookingUuid")
+        val item = getItemByUuid(itemBooking.itemUuid)
+            ?: throw EntityNotFoundException("No item for UUID: ${itemBooking.itemUuid}")
+        if (item.userUuid != userUuid) throw CustomForbiddenException("User is not the owner of item: ${item.uuid}")
+        if (itemBooking.status != BookingStatus.PENDING) throw CustomBadRequestException(code = ErrorCode.BookingNotPending)
+
+        itemBooking.status = BookingStatus.DECLINED
+        itemBooking.persist()
+
+        val requester = User.find("uuid", itemBooking.userUuid).firstResult()
+        val requesterName = "${requester?.firstName ?: ""} ${requester?.lastName ?: ""}".trim()
+        bookingEventSource.fireAsync(
+            BookingEvent(
+                notificationType = NotificationType.BOOKING_DECLINED,
+                recipientUserUuid = itemBooking.userUuid,
+                bookingUuid = itemBooking.uuid,
+                itemName = item.name,
+                requesterName = requesterName
+            )
+        )
+
+        return ItemBookingModel(itemBooking)
+    }
+
+    fun cancelBooking(bookingUuid: UUID, userUuid: UUID): ItemBookingModel {
+        val itemBooking = ItemBooking.find("uuid", bookingUuid).firstResult()
+            ?: throw EntityNotFoundException("No item booking for UUID: $bookingUuid")
+        val item = getItemByUuid(itemBooking.itemUuid)
+            ?: throw EntityNotFoundException("No item for UUID: ${itemBooking.itemUuid}")
+
+        val isRequester = itemBooking.userUuid == userUuid
+        val isOwner = item.userUuid == userUuid
+        if (!isRequester && !isOwner) throw CustomBadRequestException(code = ErrorCode.BookingAccessDenied)
+        if (itemBooking.status != BookingStatus.PENDING && itemBooking.status != BookingStatus.CONFIRMED) {
+            throw CustomBadRequestException(code = ErrorCode.BookingNotCancellable)
+        }
+
+        itemBooking.status = BookingStatus.CANCELLED
+        itemBooking.cancelledBy = if (isOwner) CancelledBy.OWNER else CancelledBy.REQUESTER
+        itemBooking.cancelledAt = OffsetDateTime.now()
+        itemBooking.persist()
+
+        val requester = User.find("uuid", itemBooking.userUuid).firstResult()
+        val requesterName = "${requester?.firstName ?: ""} ${requester?.lastName ?: ""}".trim()
+        val recipientUuid = if (isOwner) itemBooking.userUuid else item.userUuid
+        bookingEventSource.fireAsync(
+            BookingEvent(
+                notificationType = NotificationType.BOOKING_CANCELLED,
+                recipientUserUuid = recipientUuid,
+                bookingUuid = itemBooking.uuid,
+                itemName = item.name,
+                requesterName = requesterName
+            )
+        )
+
         return ItemBookingModel(itemBooking)
     }
 
@@ -255,7 +373,7 @@ class ItemService {
         )
 
         if (ItemBooking.find(
-                "itemUuid = ?1 AND ((?2 BETWEEN startAt AND endAt) OR (?3 BETWEEN startAt AND endAt))",
+                "itemUuid = ?1 AND status = 'CONFIRMED' AND startAt < ?3 AND endAt > ?2",
                 item.uuid, startAt, endAt
             ).count() > 0
         ) throw CustomBadRequestException(

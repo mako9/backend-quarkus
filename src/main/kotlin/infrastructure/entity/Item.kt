@@ -76,6 +76,9 @@ class Item : PanacheEntityBase {
     @Column
     var description: String? = null
 
+    @Column(name = "requires_approval")
+    var requiresApproval: Boolean = false
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "community_uuid", referencedColumnName = "uuid", insertable = false, updatable = false)
     var community: Community? = null
@@ -93,7 +96,8 @@ class Item : PanacheEntityBase {
         isActive: Boolean,
         availability: String?,
         availableUntil: OffsetDateTime?,
-        description: String?
+        description: String?,
+        requiresApproval: Boolean = false
     ) : this() {
         this.uuid = uuid
         this.name = name
@@ -110,6 +114,7 @@ class Item : PanacheEntityBase {
         this.availability = availability
         this.availableUntil = availableUntil
         this.description = description
+        this.requiresApproval = requiresApproval
     }
 
     private constructor()

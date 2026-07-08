@@ -1,5 +1,7 @@
 package api.dto
 
+import common.BookingStatus
+import common.CancelledBy
 import domain.model.ItemBookingModel
 import java.time.OffsetDateTime
 import java.util.*
@@ -10,7 +12,10 @@ data class ItemBookingDto(
     val userUuid: UUID,
     val startAt: OffsetDateTime,
     val endAt: OffsetDateTime,
-    val createdAt: OffsetDateTime
+    val createdAt: OffsetDateTime,
+    val status: BookingStatus,
+    val cancelledBy: CancelledBy?,
+    val cancelledAt: OffsetDateTime?
 ) {
     constructor(itemBookingModel: ItemBookingModel) : this(
         uuid = itemBookingModel.uuid,
@@ -18,6 +23,9 @@ data class ItemBookingDto(
         userUuid = itemBookingModel.userUuid,
         startAt = itemBookingModel.startAt,
         endAt = itemBookingModel.endAt,
-        createdAt = itemBookingModel.createdAt
+        createdAt = itemBookingModel.createdAt,
+        status = itemBookingModel.status,
+        cancelledBy = itemBookingModel.cancelledBy,
+        cancelledAt = itemBookingModel.cancelledAt
     )
 }

@@ -7,5 +7,8 @@ enum class ErrorCode(val code: String, val description: String) {
         "DATE_EXCEEDS_AVAILABLE_UNTIL",
         "the requested interval exceeds the available until date"
     ),
-    ItemReserved("ITEM_RESERVED", "the requested item is already reserved at this time")
+    ItemReserved("ITEM_RESERVED", "the requested item is already reserved at this time"),
+    BookingNotPending("BOOKING_NOT_PENDING", "booking is not in pending status"),
+    BookingNotCancellable("BOOKING_NOT_CANCELLABLE", "booking cannot be cancelled"),
+    BookingAccessDenied("BOOKING_ACCESS_DENIED", "user does not have access to this booking")
 }
