@@ -108,7 +108,8 @@ class ItemController : Controller() {
             itemRequestDto.isActive,
             availability = itemRequestDto.availability.map { it.toTimeIntervalModel() },
             availableUntil = itemRequestDto.availableUntil,
-            description = itemRequestDto.description
+            description = itemRequestDto.description,
+            requiresApproval = itemRequestDto.requiresApproval
         )
         itemModel = itemService.insertItem(itemModel)
         return ItemDetailDto(itemModel)
@@ -136,7 +137,8 @@ class ItemController : Controller() {
             itemRequestDto.isActive,
             availability = itemRequestDto.availability.map { it.toTimeIntervalModel() },
             availableUntil = itemRequestDto.availableUntil,
-            description = itemRequestDto.description
+            description = itemRequestDto.description,
+            requiresApproval = itemRequestDto.requiresApproval
         )
         itemModel = itemService.updateItem(itemModel)
         return ItemDetailDto(itemModel)
@@ -257,7 +259,7 @@ class ItemController : Controller() {
     fun bookItem(
         @RestPath uuid: UUID,
         itemBookingRequestDto: ItemBookingRequestDto
-    ): Response {
+    ): ItemBookingDto {
         val userUuid = getUserUuid()
 
         val itemBookingModel = itemService.bookItem(
@@ -266,7 +268,37 @@ class ItemController : Controller() {
             startAt = itemBookingRequestDto.startAt,
             endAt = itemBookingRequestDto.endAt
         )
-        return Response.created(URI.create("/booking/${itemBookingModel.uuid}")).build()
+        return ItemBookingDto(itemBookingModel)
+    }
+
+    @PATCH
+    @Path("/booking/{uuid}/approve")
+    fun approveBooking(
+        @RestPath uuid: UUID
+    ): ItemBookingDto {
+        val userUuid = getUserUuid()
+        val itemBookingModel = itemService.approveBooking(uuid, userUuid)
+        return ItemBookingDto(itemBookingModel)
+    }
+
+    @PATCH
+    @Path("/booking/{uuid}/decline")
+    fun declineBooking(
+        @RestPath uuid: UUID
+    ): ItemBookingDto {
+        val userUuid = getUserUuid()
+        val itemBookingModel = itemService.declineBooking(uuid, userUuid)
+        return ItemBookingDto(itemBookingModel)
+    }
+
+    @PATCH
+    @Path("/booking/{uuid}/cancel")
+    fun cancelBooking(
+        @RestPath uuid: UUID
+    ): ItemBookingDto {
+        val userUuid = getUserUuid()
+        val itemBookingModel = itemService.cancelBooking(uuid, userUuid)
+        return ItemBookingDto(itemBookingModel)
     }
 
     private fun checkCommunity(communityUuid: UUID) {

@@ -20,7 +20,8 @@ data class ItemModel(
     var availability: List<TimeIntervalModel>,
     var availableUntil: OffsetDateTime? = null,
     var description: String?,
-    var communityModel: CommunityModel? = null
+    var communityModel: CommunityModel? = null,
+    var requiresApproval: Boolean = false
 ) {
 
     constructor(item: Item) : this(
@@ -39,7 +40,8 @@ data class ItemModel(
         } ?: emptyList(),
         availableUntil = item.availableUntil,
         description = item.description,
-        communityModel = if (item.community != null) CommunityModel(item.community!!) else null
+        communityModel = if (item.community != null) CommunityModel(item.community!!) else null,
+        requiresApproval = item.requiresApproval
     )
 
     fun toItem(): Item {
@@ -56,7 +58,8 @@ data class ItemModel(
             isActive,
             ObjectMapper().writeValueAsString(availability),
             availableUntil,
-            description
+            description,
+            requiresApproval
         )
     }
 }

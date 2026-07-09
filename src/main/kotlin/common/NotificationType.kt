@@ -1,0 +1,3 @@
+package common
+
+enum class NotificationType { BOOKING_REQUEST, BOOKING_CONFIRMED, BOOKING_DECLINED, BOOKING_CANCELLED }

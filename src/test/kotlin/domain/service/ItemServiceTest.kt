@@ -1,6 +1,8 @@
 package domain.service
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import common.BookingStatus
+import common.CancelledBy
 import common.ItemCategory
 import common.PageConfig
 import domain.model.ItemBookingModel
@@ -95,6 +97,9 @@ class ItemServiceTest {
 
     @Test
     fun `when retrieving paginated items for specific community, then correct page of community models is returned`() {
+        // inactive item should not be returned
+        entityUtil.setupItem { it.name = "Not active"; it.communityUuid = community.uuid; it.isActive = false }
+
         val pageConfig = PageConfig()
         val communityPage =
             itemService.getItemsPageOfCommunities(listOf(community.uuid), user.uuid, pageConfig, null, null)
@@ -308,7 +313,7 @@ class ItemServiceTest {
     @Test
     fun `when retrieving item bookings of item, then page of item booking is returned`() {
         val page = itemService.getItemBookingsPageOfItem(
-            requestingUser.uuid,
+            itemThree.userUuid,
             itemThree.uuid,
             PageConfig(1, 1),
             ItemBookingSortBy.CREATED_AT,
@@ -364,6 +369,7 @@ class ItemServiceTest {
         assertOffsetDateTimeEquals(itemBookingModel.startAt, storedItemBooking?.startAt)
         assertOffsetDateTimeEquals(itemBookingModel.endAt, storedItemBooking?.endAt)
         assertOffsetDateTimeEquals(itemBookingModel.createdAt, storedItemBooking?.createdAt)
+        assertEquals(BookingStatus.CONFIRMED, storedItemBooking?.status)
     }
 
     @Test
@@ -417,6 +423,7 @@ class ItemServiceTest {
             it.itemUuid = itemOne.uuid
             it.startAt = OffsetDateTime.now()
             it.endAt = OffsetDateTime.now().plusDays(3)
+            it.status = BookingStatus.CONFIRMED
         }
         val exception = assertThrows(CustomBadRequestException::class.java) {
             itemService.bookItem(
@@ -429,5 +436,193 @@ class ItemServiceTest {
 
         assertEquals(listOf(ErrorCode.ItemReserved), exception.codes)
         assertEquals(1, ItemBooking.find("itemUuid = ?1", itemOne.uuid).count())
+    }
+
+    @Test
+    fun `when booking item with requiresApproval, then booking is created with PENDING status`() {
+        val item = entityUtil.setupItem {
+            it.communityUuid = community.uuid
+            it.userUuid = user.uuid
+            it.requiresApproval = true
+        }
+
+        val itemBookingModel = itemService.bookItem(
+            item.uuid,
+            requestingUser.uuid,
+            OffsetDateTime.now(),
+            OffsetDateTime.now().plusDays(2)
+        )
+
+        val storedItemBooking = ItemBooking.find("uuid", itemBookingModel.uuid).firstResult()
+        assertEquals(BookingStatus.PENDING, storedItemBooking?.status)
+    }
+
+    @Test
+    fun `when booking item with pending booking overlap, then booking is still allowed`() {
+        val item = entityUtil.setupItem {
+            it.communityUuid = community.uuid
+            it.userUuid = user.uuid
+        }
+        entityUtil.setupItemBooking {
+            it.itemUuid = item.uuid
+            it.startAt = OffsetDateTime.now()
+            it.endAt = OffsetDateTime.now().plusDays(3)
+            it.status = BookingStatus.PENDING
+        }
+
+        val itemBookingModel = itemService.bookItem(
+            item.uuid,
+            requestingUser.uuid,
+            OffsetDateTime.now().plusDays(1),
+            OffsetDateTime.now().plusDays(2)
+        )
+
+        val storedItemBooking = ItemBooking.find("uuid", itemBookingModel.uuid).firstResult()
+        assertEquals(BookingStatus.CONFIRMED, storedItemBooking?.status)
+    }
+
+    @Test
+    fun `when approving booking, then status is set to CONFIRMED`() {
+        val item = entityUtil.setupItem {
+            it.communityUuid = community.uuid
+            it.userUuid = user.uuid
+        }
+        val booking = entityUtil.setupItemBooking {
+            it.itemUuid = item.uuid
+            it.userUuid = requestingUser.uuid
+            it.status = BookingStatus.PENDING
+        }
+
+        itemService.approveBooking(booking.uuid, user.uuid)
+
+        val storedBooking = ItemBooking.find("uuid", booking.uuid).firstResult()
+        assertEquals(BookingStatus.CONFIRMED, storedBooking?.status)
+    }
+
+    @Test
+    fun `when approving booking as non-owner, then exception is thrown`() {
+        val item = entityUtil.setupItem {
+            it.communityUuid = community.uuid
+            it.userUuid = user.uuid
+        }
+        val booking = entityUtil.setupItemBooking {
+            it.itemUuid = item.uuid
+            it.userUuid = requestingUser.uuid
+            it.status = BookingStatus.PENDING
+        }
+
+        assertThrows<CustomForbiddenException> {
+            itemService.approveBooking(booking.uuid, requestingUser.uuid)
+        }
+    }
+
+    @Test
+    fun `when approving already confirmed booking, then exception is thrown`() {
+        val item = entityUtil.setupItem {
+            it.communityUuid = community.uuid
+            it.userUuid = user.uuid
+        }
+        val booking = entityUtil.setupItemBooking {
+            it.itemUuid = item.uuid
+            it.userUuid = requestingUser.uuid
+            it.status = BookingStatus.CONFIRMED
+        }
+
+        val exception = assertThrows(CustomBadRequestException::class.java) {
+            itemService.approveBooking(booking.uuid, user.uuid)
+        }
+        assertEquals(listOf(ErrorCode.BookingNotPending), exception.codes)
+    }
+
+    @Test
+    fun `when declining booking, then status is set to DECLINED`() {
+        val item = entityUtil.setupItem {
+            it.communityUuid = community.uuid
+            it.userUuid = user.uuid
+        }
+        val booking = entityUtil.setupItemBooking {
+            it.itemUuid = item.uuid
+            it.userUuid = requestingUser.uuid
+            it.status = BookingStatus.PENDING
+        }
+
+        itemService.declineBooking(booking.uuid, user.uuid)
+
+        val storedBooking = ItemBooking.find("uuid", booking.uuid).firstResult()
+        assertEquals(BookingStatus.DECLINED, storedBooking?.status)
+    }
+
+    @Test
+    fun `when declining booking as non-owner, then exception is thrown`() {
+        val item = entityUtil.setupItem {
+            it.communityUuid = community.uuid
+            it.userUuid = user.uuid
+        }
+        val booking = entityUtil.setupItemBooking {
+            it.itemUuid = item.uuid
+            it.userUuid = requestingUser.uuid
+            it.status = BookingStatus.PENDING
+        }
+
+        assertThrows<CustomForbiddenException> {
+            itemService.declineBooking(booking.uuid, requestingUser.uuid)
+        }
+    }
+
+    @Test
+    fun `when cancelling booking as requester, then status is set to CANCELLED`() {
+        val item = entityUtil.setupItem {
+            it.communityUuid = community.uuid
+            it.userUuid = user.uuid
+        }
+        val booking = entityUtil.setupItemBooking {
+            it.itemUuid = item.uuid
+            it.userUuid = requestingUser.uuid
+            it.status = BookingStatus.CONFIRMED
+        }
+
+        itemService.cancelBooking(booking.uuid, requestingUser.uuid)
+
+        val storedBooking = ItemBooking.find("uuid", booking.uuid).firstResult()
+        assertEquals(BookingStatus.CANCELLED, storedBooking?.status)
+        assertEquals(CancelledBy.REQUESTER, storedBooking?.cancelledBy)
+        assertNotNull(storedBooking?.cancelledAt)
+    }
+
+    @Test
+    fun `when cancelling booking as owner, then status is set to CANCELLED`() {
+        val item = entityUtil.setupItem {
+            it.communityUuid = community.uuid
+            it.userUuid = user.uuid
+        }
+        val booking = entityUtil.setupItemBooking {
+            it.itemUuid = item.uuid
+            it.userUuid = requestingUser.uuid
+            it.status = BookingStatus.CONFIRMED
+        }
+
+        itemService.cancelBooking(booking.uuid, user.uuid)
+
+        val storedBooking = ItemBooking.find("uuid", booking.uuid).firstResult()
+        assertEquals(BookingStatus.CANCELLED, storedBooking?.status)
+        assertEquals(CancelledBy.OWNER, storedBooking?.cancelledBy)
+    }
+
+    @Test
+    fun `when cancelling already cancelled booking, then exception is thrown`() {
+        val item = entityUtil.setupItem {
+            it.communityUuid = community.uuid
+            it.userUuid = user.uuid
+        }
+        val booking = entityUtil.setupItemBooking {
+            it.itemUuid = item.uuid
+            it.userUuid = requestingUser.uuid
+            it.status = BookingStatus.CANCELLED
+        }
+
+        val exception = assertThrows(CustomBadRequestException::class.java) {
+            itemService.cancelBooking(booking.uuid, requestingUser.uuid)
+        }
+        assertEquals(listOf(ErrorCode.BookingNotCancellable), exception.codes)
     }
 }

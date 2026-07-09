@@ -1,5 +1,7 @@
 package infrastructure.entity
 
+import common.BookingStatus
+import common.CancelledBy
 import io.quarkus.hibernate.orm.panache.kotlin.PanacheCompanion
 import io.quarkus.hibernate.orm.panache.kotlin.PanacheEntityBase
 import jakarta.persistence.*
@@ -40,17 +42,30 @@ class ItemBooking : PanacheEntityBase {
     @Column(name = "created_at")
     lateinit var createdAt: OffsetDateTime
 
+    @Enumerated(EnumType.STRING)
+    @Column
+    lateinit var status: BookingStatus
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "cancelled_by")
+    var cancelledBy: CancelledBy? = null
+
+    @Column(name = "cancelled_at")
+    var cancelledAt: OffsetDateTime? = null
+
     constructor(
         itemUuid: UUID,
         userUuid: UUID,
         startAt: OffsetDateTime,
-        endAt: OffsetDateTime
+        endAt: OffsetDateTime,
+        status: BookingStatus = BookingStatus.CONFIRMED
     ) : this() {
         this.itemUuid = itemUuid
         this.userUuid = userUuid
         this.startAt = startAt
         this.endAt = endAt
         this.createdAt = OffsetDateTime.now()
+        this.status = status
     }
 
     private constructor()

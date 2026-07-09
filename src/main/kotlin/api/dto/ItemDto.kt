@@ -40,7 +40,8 @@ data class ItemDetailDto(
     var availableUntil: OffsetDateTime?,
     var description: String?,
     var isOwner: Boolean = false,
-    var communityName: String?
+    var communityName: String?,
+    val requiresApproval: Boolean = false
 ) {
 
     constructor(itemModel: ItemModel) : this(
@@ -57,7 +58,8 @@ data class ItemDetailDto(
         availability = itemModel.availability.map { ItemTimeIntervalDto(it) },
         availableUntil = itemModel.availableUntil,
         description = itemModel.description,
-        communityName = itemModel.communityModel?.name
+        communityName = itemModel.communityModel?.name,
+        requiresApproval = itemModel.requiresApproval
     )
 }
 
@@ -72,7 +74,8 @@ data class ItemRequestDto(
     var communityUuid: UUID,
     var availability: List<ItemTimeIntervalDto> = emptyList(),
     var availableUntil: OffsetDateTime? = null,
-    var description: String? = null
+    var description: String? = null,
+    val requiresApproval: Boolean = false
 )
 
 data class ItemBookingRequestDto(
