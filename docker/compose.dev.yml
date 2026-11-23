@@ -1,0 +1,21 @@
+# Local stack for running the packaged artifacts. Not for tests (Testcontainers owns those)
+# and not for production. Postgres is on 5433 because a host postgres already owns 5432.
+name: comshare-dev
+services:
+  postgres:
+    image: docker.io/library/postgres:17
+    environment:
+      POSTGRES_USER: quarkus
+      POSTGRES_PASSWORD: quarkus
+      POSTGRES_DB: quarkus
+    ports: ["5433:5432"]
+    volumes: ["pgdev:/var/lib/postgresql/data"]
+  keycloak:
+    image: docker.io/keycloak/keycloak:26.5.4
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+    ports: ["8180:8080"]
+    volumes: ["../config:/opt/keycloak/data/import:ro"]
+volumes: { pgdev: {} }
