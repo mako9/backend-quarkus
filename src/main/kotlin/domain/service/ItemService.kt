@@ -243,6 +243,21 @@ class ItemService {
             )
         )
 
+        // The event above reaches exactly one of the two parties. For an item that needs no approval it
+        // confirms the booking to the requester, which leaves the owner with no idea that their item is
+        // spoken for - so tell them too.
+        if (status == BookingStatus.CONFIRMED) {
+            bookingEventSource.fireAsync(
+                BookingEvent(
+                    notificationType = NotificationType.ITEM_BOOKED,
+                    recipientUserUuid = item.userUuid,
+                    bookingUuid = itemBooking.uuid,
+                    itemName = item.name,
+                    requesterName = requesterName
+                )
+            )
+        }
+
         return ItemBookingModel(itemBooking)
     }
 

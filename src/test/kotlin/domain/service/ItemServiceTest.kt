@@ -25,6 +25,7 @@ import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import testUtils.AssertUtil.assertEventually
 import testUtils.AssertUtil.assertOffsetDateTimeEquals
 import testUtils.EntityUtil
 import testUtils.UnitTestProfile
@@ -370,6 +371,23 @@ class ItemServiceTest {
         assertOffsetDateTimeEquals(itemBookingModel.endAt, storedItemBooking?.endAt)
         assertOffsetDateTimeEquals(itemBookingModel.createdAt, storedItemBooking?.createdAt)
         assertEquals(BookingStatus.CONFIRMED, storedItemBooking?.status)
+    }
+
+    @Test
+    fun `when booking an item that needs no approval, then the owner is notified with ITEM_BOOKED`() {
+        itemService.bookItem(
+            itemOne.uuid,
+            requestingUser.uuid,
+            OffsetDateTime.now().plusDays(1),
+            OffsetDateTime.now().plusDays(2)
+        )
+
+        // notification types are compared by name, so this test compiles before the enum value exists
+        assertEventually("expected an ITEM_BOOKED notification for the item owner") {
+            Notification.find("userUuid = ?1", user.uuid).list().any { it.type.name == "ITEM_BOOKED" }
+        }
+        // the confirmation still belongs to the requester, not to the owner
+        assertFalse(Notification.find("userUuid = ?1", user.uuid).list().any { it.type.name == "BOOKING_CONFIRMED" })
     }
 
     @Test

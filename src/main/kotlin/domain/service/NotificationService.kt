@@ -80,6 +80,7 @@ class NotificationService {
         NotificationType.BOOKING_DECLINED -> "Your booking has been declined"
         NotificationType.BOOKING_CANCELLED -> "A booking has been cancelled"
         NotificationType.BOOKING_RETURNED -> "An item has been returned"
+        NotificationType.ITEM_BOOKED -> "Your item was booked"
     }
 
     private fun emailBody(event: BookingEvent): String = when (event.notificationType) {
@@ -93,5 +94,7 @@ class NotificationService {
             "A booking for \"${event.itemName}\" has been cancelled."
         NotificationType.BOOKING_RETURNED ->
             "The item \"${event.itemName}\" has been marked as returned."
+        NotificationType.ITEM_BOOKED ->
+            "The item \"${event.itemName}\" has been booked by ${event.requesterName}."
     }
 }

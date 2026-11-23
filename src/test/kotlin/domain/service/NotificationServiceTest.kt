@@ -2,6 +2,7 @@ package domain.service
 
 import common.NotificationType
 import common.PageConfig
+import domain.event.BookingEvent
 import domain.model.exception.CustomForbiddenException
 import infrastructure.entity.Notification
 import infrastructure.entity.User
@@ -38,6 +39,26 @@ class NotificationServiceTest {
     @AfterEach
     fun afterEach() {
         entityUtil.deleteAllData()
+    }
+
+    @Test
+    fun `when an item is booked, then a notification of that type is persisted for the recipient`() {
+        val booking = entityUtil.setupItemBooking {}
+
+        notificationService.onBookingEvent(
+            BookingEvent(
+                notificationType = NotificationType.ITEM_BOOKED,
+                recipientUserUuid = user.uuid,
+                bookingUuid = booking.uuid,
+                itemName = "pressure washer",
+                requesterName = "Bob Neighbour"
+            )
+        )
+
+        val notification = Notification.find("userUuid", user.uuid).singleResult()
+        assertEquals(NotificationType.ITEM_BOOKED, notification.type)
+        assertEquals(booking.uuid, notification.bookingUuid)
+        assertEquals(false, notification.read)
     }
 
     @Test
