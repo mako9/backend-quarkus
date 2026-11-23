@@ -906,6 +906,15 @@ a mounted volume, or move Postgres to a managed instance.
   booking, upload and delete break **only in production**, with a clean local run.
 - Flutter gets `--dart-define` for issuer/client/redirect/backend base URL and three
   build configurations (dev / staging / pilot), replacing the localhost asset.
+- **Name the toolchain versions in the images, the way CI now does.** `frontend_flutter`'s workflow asked for
+  `channel: stable` with no version, so on 2026-11-23 it installed Flutter 3.50.1 — three days old — and
+  `flutter analyze` failed with 51 `deprecated_member_use` infos: since v3.47 Flutter deprecates
+  `package:flutter/material.dart` (and the generated `Global*Localizations` imports) in favour of
+  `package:material_ui`. The workflow is pinned to Flutter 3.41.9 / Dart 3.11.5 now, which is what the code was
+  formatted, analyzed and tested with. Consequence for here: **upgrading Flutter is a task with a migration in
+  front of it**, not a `flutter upgrade`, and the backend/web/mobile images this phase builds have to name
+  versions rather than take `latest` — otherwise the deployment drifts the way the test job just did, except
+  against real users.
 - Nightly `pg_dump` plus an object-storage sync — **to a destination off the box** (a
   Hetzner Storage Box, B2, rsync.net: whatever the author is willing to pay for and hold
   credentials for), with a **restore drilled once, before the first neighbour signs up**. A dump
