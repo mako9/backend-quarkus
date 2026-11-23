@@ -30,13 +30,23 @@ Tear it down with `docker compose -f docker/compose.dev.yml down` (add `-v` to d
 ```bash
 cd backend-quarkus
 ./mvnw -B -DskipTests package
-QUARKUS_DATASOURCE_JDBC_URL=jdbc:postgresql://localhost:5433/quarkus \
-  java -jar target/quarkus-app/quarkus-run.jar
+java -jar target/quarkus-app/quarkus-run.jar
 ```
 
-**Check that URL every time.** `application.properties` has no `%prod` datasource, so without the
-override the artifact migrates `localhost:5432` — the developer's own database. That happened on
-2026-11-23 while this plan was being written, which is why it is in bold here and in the plan.
+No environment is needed for a local run: the default URL is `jdbc:postgresql://localhost:5433/quarkus`, the
+database in `docker/compose.dev.yml`. It used to be an unqualified `localhost` — port 5432, the developer's own
+postgres — and `quarkus.liquibase.migrate-at-start=true` is not profile-scoped, so an unconfigured run migrated
+*that* database. It did, on 2026-11-23. A deployment sets `QUARKUS_DATASOURCE_JDBC_URL`; if it forgets, startup
+fails on a refused connection instead of quietly writing somewhere else. Measured after the change, with no
+datasource environment at all: boot reached `Profile prod activated`, `POST /api/user/community/` answered 200,
+the row was in the 5433 database and absent from the 5432 one, whose `databasechangelog` still had its previous
+5 rows and execution timestamp.
+
+One exception to "stay off 5432": **the test suite runs against the host postgres.**
+`src/test/resources/application.properties` sets `jdbc:postgresql://localhost/quarkus_test` with
+`quarkus.liquibase.clean-at-start=true`, so `./mvnw test` needs a postgres on 5432 and wipes `quarkus_test` on
+every run. It never touches the `quarkus` database. CI mirrors this with a `postgres` service container
+(`.github/workflows/maven.yml`), which is also why the suite does not use dev services for the datasource.
 
 `quarkus:dev` does not work with the checked-in Maven wrapper (wrapper is 3.8.4, Quarkus 3.33's dev goal
 needs ≥ 3.9.0), so the packaged jar is the only way to run this backend locally.
@@ -53,25 +63,43 @@ curl -s -X POST localhost:8180/realms/quarkus/protocol/openid-connect/token \
 
 ```bash
 cd frontend-nextjs
-cp .env.example .env.local       # then fill it in; .env.development has the local-stack values
-BACKEND_BASE_URL=http://127.0.0.1:8080/api NEXTAUTH_URL=http://localhost:3000 pnpm build
+cp .env.development .env.local   # the local-stack values; .env.example is for deployments
+NEXTAUTH_URL=http://localhost:3000 pnpm build
 pnpm start                       # http://localhost:3000
 ```
+
+`.env.development` is committed and holds the local realm's values (`BACKEND_BASE_URL`, the issuer, the
+`backend-service` client and its realm secret). **Do not start from `.env.example` for the local stack** — it
+points at `auth.example.org` and `api.example.org`, and only the variables you repeat on the command line get
+overridden, so sign-in silently fails against the local realm.
 
 `BACKEND_BASE_URL` is read from the environment, never from `next.config.js`, and it is **inlined into the
 browser bundle at build time** — the app calls the API from the browser. Changing the API address for a
 deployment therefore means rebuilding, not restarting. Routing those calls through Next instead is an open
-question in the spec and is not decided here.
+question in the spec and is not decided here. Since 2026-11-23 a build that has no `BACKEND_BASE_URL` fails
+with a message instead of baking `undefined/user/item/...` into the bundle.
 
 `pnpm build` needs `KEYCLOAK_ISSUER`, `KEYCLOAK_CLIENT_ID`, `KEYCLOAK_CLIENT_SECRET` and `NEXTAUTH_SECRET`
 present, because collecting page data imports `pages/api/auth/[...nextauth].ts`, which throws without
-them. An image build must pass them in even though they are runtime values.
+them. An image build must pass them in even though they are runtime values. `next build` also does **not** read
+`.env.development` (it loads `.env`, `.env.production` and `.env.local`), which is why `.github/workflows/node.js.yml`
+carries them in an `env` block.
 
 ## Mobile
 
 `assets/config/config.yaml` already points at this stack (`backendHost: localhost`, `backendPort: 8080`,
-`issuer: http://localhost:8180/realms/quarkus`, redirect `com.flutter-auth-test:/oauth-redirect`), so
-running the app against a local stack needs no edit. It does need a device: see *What does not work*.
+`issuer: http://localhost:8180/realms/quarkus`, redirect `com.flutter-auth-test:/oauth-redirect`), so nothing
+in the file needs editing. On an Android emulator `localhost` is the emulator itself, so the phone has to be
+told where the stack is:
+
+```bash
+adb reverse tcp:8080 tcp:8080 && adb reverse tcp:8180 tcp:8180
+```
+
+`adb reverse` rather than `10.0.2.2`, because the token's issuer has to match `issuer` above or the backend
+rejects it. The compose stack publishes both ports on `127.0.0.1` only, so a physical device on the LAN cannot
+reach it either way; use the emulator or a USB `adb reverse`. It does need a device: see *What does not work*.
+(`assets/config/config.yaml` is gitignored by line 56 but tracked anyway, so a fresh checkout does have one.)
 
 ## What does not work
 
@@ -98,6 +126,19 @@ running the app against a local stack needs no edit. It does need a device: see 
    POST with 400 and the login page again. That is a limitation of the scripted client, not of the app:
    the same realm and client authenticated from a real browser on 2026-11-23 (Phase 0's walk). A human
    pass is still owed: load `/`, sign in, list items, open an item, create an item, book one.
+8. **Mobile cannot open an item at all.** `Item.availability` is declared `String?` (`item.dart:19`) and
+   `fromJson` assigns the JSON array to it (`:63`), while every item response carries `availability` as an
+   array — `[]` when the item has no window (measured on the artifact). A throwaway test that parsed a real
+   response body failed with `type 'List<dynamic>' is not a subtype of type 'String?'` at `item.dart:63`.
+   Pre-existing, not from Phase 1: the pre-Phase-1 artifact sends an array here too. Plan 2c's first item.
+9. **Mobile cannot create or update an item either.** Nothing in the app ever sets `Item.availability`, so
+   `toJson()` sends `"availability": null`, and `ItemRequestDto.availability` is a non-null `List` with a
+   default. Measured on the current artifact: `POST /api/user/item/` with `"availability": null` → **HTTP 400**;
+   with `[]` → 200; with the key omitted → 200; with an interval whose keys the DTO does not know → 400. The
+   pre-Phase-1 artifact returns 400 for the same null request too, so Phase 1's Jackson change did not cause
+   this (it actually improved one case: the old artifact returned 400 when the key was *omitted*, the current
+   one accepts that). The web is unaffected — create sends `[]` and the update echoes back what the server
+   sent. Plan 2c.
 
 ## Verified
 
@@ -128,3 +169,18 @@ session render the logged-out shell, which is correct for an unauthenticated wal
 
 Mobile: `flutter test` 149 passed, `flutter analyze` clean. Runtime: not verified, reason in *What does
 not work* 6.
+
+Re-verified on 2026-11-23 after the review round, all on the packaged artifacts:
+
+- `java -jar target/quarkus-app/quarkus-run.jar` with **no** datasource environment boots and writes to the
+  5433 database (`select count(*) … = 1`) and not to 5432 (`= 0`), whose `databasechangelog` is unchanged.
+- The availability probes behind defects 8 and 9, including the same requests against the **pre-Phase-1**
+  artifact built in a throwaway worktree at `0d9aea6`: that one answers `admin`/`member`/`active`/`owner` and
+  returns 400 for both an omitted and a null `availability`. That comparison is what separates what Phase 1
+  changed from what it inherited.
+- `docker port` reports `127.0.0.1:5433` and `127.0.0.1:8180` after `--force-recreate`, and OIDC discovery and
+  `psql -h 127.0.0.1 -p 5433` still work.
+- `pnpm build` without `BACKEND_BASE_URL` exits 1 with the config's message; with the CI-shaped environment it
+  exits 0 and puts the address in 9 client chunks; `pnpm dev` on `.env.development` alone serves
+  `/en/about` 200.
+- Backend suite after the datasource change: 149 tests, 0 skipped.
