@@ -170,12 +170,15 @@ format is now the Kotlin-module format everywhere, and this is what moved:
 
 | Name | Was | Now | Where |
 |---|---|---|---|
-| page flags | `firstPage` / `lastPage` (client read) | `isFirstPage` / `isLastPage` | `lib/model/data_page.dart:37,38`; artifact already answered these under `@QuarkusTest`, and now answers them for real |
+| page flags | `firstPage` / `lastPage` (client read) | `isFirstPage` / `isLastPage` | `lib/model/data_page.dart:38,39`; artifact already answered these under `@QuarkusTest`, and now answers them for real |
 | community flags | `admin` / `member` (client read) | `isAdmin` / `isMember` | `lib/model/community.dart:51,56` |
-| item active | `active` (client read) | `isActive` | `lib/model/item.dart:56` |
-| item owner | `owner` (client read) | `isOwner` | `lib/model/item.dart:62` |
-| web field name | `active: boolean` | `isActive: boolean` | `app/models/item.ts:11`, read at `ownedItem.tsx:38`, sent at `ownedItem.tsx:242` and `pages/items/create.tsx:100`, plus four test fixtures |
+| item active | `active` (client read) | `isActive` | `lib/model/item.dart:60` |
+| item owner | `owner` (client read) | `isOwner` | `lib/model/item.dart:66` |
+| web field name | `active: boolean` | `isActive: boolean` | `app/models/item.ts:11`, read at `ownedItem.tsx:38`, sent at `ownedItem.tsx:242` and `pages/items/create.tsx:102`, plus four test fixtures |
 | backend scope | `<scope>test</scope>` | runtime | `pom.xml`, guarded by the CI gate |
+
+(The Flutter line numbers are post-`dart format`: `f2cfaaf` reflowed 85 files after the rename, so the lines
+quoted in the finding above are one or two off from the current file.)
 
 Measured on the packaged artifact rather than inferred (runbook "Verified"): pages answer
 `isFirstPage`/`isLastPage`, `GET /api/user/community/{uuid}` answers `isAdmin`/`isMember`, and a
@@ -184,14 +187,28 @@ request direction, which no test could demonstrate because tests always had the 
 `Item.toJson()` was already right and is untouched; the two Flutter directions are now asserted to agree
 by a round-trip test that failed before the model changed. No un-prefixed boolean is written or read by
 either client any more (grep over `lib`, `app`, `pages`, `__tests__`; `app/models/community.ts` has no
-owner/admin/member field at all — the web decides ownership by comparing `userUuid`).
+owner/admin/member field at all, and the web reads no ownership flag from the API — which "owned" page you get
+is chosen by a URL query parameter, `pages/index.tsx:114` and `my-area.tsx:38` pass `isOwned`, and
+`pages/items/[id].tsx:15` decides whether to fetch booked dates from it. That client-supplied value is Phase 2
+read-authorization territory, not a serialization question).
 
-Phase 2 therefore starts from one format, not two. Anything it adds must keep the `is*` spelling on the
-wire, and `scripts/check-runtime-classpath.sh` is what stops the module from drifting back to test scope.
-Two facts Phase 2 inherits: `isOwner` is answered `false` on `GET /api/user/item/{uuid}` even to the owner
-because `ItemDetailDto` is built without the requester (`runbook.md`, "What does not work" 2), and the
-write side is asserted only by tests plus that one live POST — the artifact's request handling is not
-covered by a test that could fail.
+**The `is*` names are one format now; `availability` is still two shapes and is not fixed.** The backend sends
+`availability` as an array of `{startDayOfWeek, endDayOfWeek, startTimeAt, endTimeAt}` — measured:
+`[{"startDayOfWeek":1,"endDayOfWeek":3,"startTimeAt":"09:00Z","endTimeAt":"17:00Z"}]` — while
+`item.dart:19` declares it `String?` and `:63` assigns the array to it, so **mobile throws
+`type 'List<dynamic>' is not a subtype of type 'String?'` on every item response** (measured with a throwaway
+test, stack at `item.dart:63`). On the write side the mobile app always sends `"availability": null`, which the
+artifact answers with **HTTP 400** — as does the pre-Phase-1 artifact, so this is inherited, not caused here;
+`[]` or omitting the key answers 200. The web's `ItemTimeInterval` was described as `{startAt, endAt}` by Phase
+1 Task 4 and now carries the four real fields (`3540200`); an interval with unknown keys is a 400, not ignored,
+which is why the type has to be exact. Full measurements: `runbook.md`, "What does not work" 8 and 9.
+
+Phase 2 therefore starts from one format **for the `is*` booleans** — anything it adds must keep the `is*`
+spelling on the wire, and `scripts/check-runtime-classpath.sh` is what stops the module from drifting back to
+test scope. Three facts Phase 2 inherits: `isOwner` is answered `false` on `GET /api/user/item/{uuid}` even to
+the owner because `ItemDetailDto` is built without the requester (`runbook.md` 2); the request direction is
+asserted by tests plus that one live POST, not by an artifact-level test that could fail; and the availability
+shape above is plan 2c's, now with a measured repro for both directions.
 
 ---
 
@@ -673,9 +690,18 @@ Task 6**, where it belongs with the artifact that has to emit it.
 - The `isActive`/`active` mismatch is a symptom of finding 0, not a local bug — handled in **Phase 1
   Task 6**, which moves `jackson-module-kotlin` to runtime scope and renames the eight client read/write
   sites in the same push (plan 1's Review Focus 3 forbids splitting that change).
-- **Availability type.** `item.dart:18` declares `String? availability` and `fromJson` assigns an array
-  to it. Give both clients a real time-interval type; Next.js's half of this is already fixed by Phase 1
-  Task 4 Step 5 (`availability: Array<string>`), the Flutter half lands here as plan 2c's item.
+- **Availability type — plan 2c's first item, with a measured repro for both directions.** `item.dart:19`
+  declares `String? availability` and `:63` assigns the JSON array to it, so the mobile app throws
+  `type 'List<dynamic>' is not a subtype of type 'String?'` on *every* item response (throwaway test, stack at
+  `item.dart:63`); and because nothing in the app ever sets the field, `toJson()` sends `"availability": null`,
+  which the artifact rejects with HTTP 400 — measured on the current artifact and on the pre-Phase-1 one, so
+  mobile item detail and item create/edit have never worked against a real backend. The real shape, measured on
+  the artifact: `[{"startDayOfWeek":1,"endDayOfWeek":3,"startTimeAt":"09:00Z","endTimeAt":"17:00Z"}]`, days
+  being `java.time.DayOfWeek` (1 = Monday). The Next.js half is done: `availability: Array<ItemTimeInterval>`
+  from Phase 1 Task 4, with `ItemTimeInterval` corrected to the four DTO fields in `3540200` (unknown interval
+  keys are a 400, not ignored, so the type must be exact). What is left for 2c is the Flutter model plus the
+  fixtures that currently hand it a `String` (`test/service/item_service_test.dart`), and deciding whether the
+  app should send no window as `[]` or omit the key — both answer 200 today.
   `frontend-nextjs/app/models/{item,community}.ts` need no further renames beyond Phase 1's.
 - Pagination: `custom_paginated_list.dart:71` only renders controls when
   `content.length > pageSize`, which the 10-item server page can never satisfy; and
