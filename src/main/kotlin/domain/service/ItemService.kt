@@ -19,6 +19,7 @@ import infrastructure.entity.Item
 import infrastructure.entity.ItemBooking
 import infrastructure.entity.ItemImage
 import infrastructure.entity.User
+import infrastructure.entity.UserCommunityRelation
 import io.quarkus.panache.common.Page
 import io.quarkus.panache.common.Sort
 import jakarta.enterprise.context.ApplicationScoped
@@ -196,7 +197,7 @@ class ItemService {
                 itemUuid
             )
             .page(Page.of(pageConfig.pageNumber, pageConfig.pageSize))
-        return PageModel.of(query, ::ItemBookingModel)
+        return PageModel.of(query) { ItemBookingModel(it).copy(isItemOwner = true) }
     }
 
     fun getItemBooking(
@@ -210,7 +211,7 @@ class ItemService {
         val isRequester = itemBooking.userUuid == userUuid
         val isOwner = item?.userUuid == userUuid
         if (!isRequester && !isOwner) throw CustomBadRequestException(code = ErrorCode.BookingAccessDenied)
-        return ItemBookingModel(itemBooking)
+        return ItemBookingModel(itemBooking).copy(isItemOwner = isOwner)
     }
 
     fun bookItem(itemUuid: UUID, userUuid: UUID, startAt: OffsetDateTime, endAt: OffsetDateTime): ItemBookingModel {
@@ -268,7 +269,7 @@ class ItemService {
             )
         )
 
-        return ItemBookingModel(itemBooking)
+        return ItemBookingModel(itemBooking).copy(isItemOwner = true)
     }
 
     fun declineBooking(bookingUuid: UUID, userUuid: UUID): ItemBookingModel {
@@ -294,7 +295,7 @@ class ItemService {
             )
         )
 
-        return ItemBookingModel(itemBooking)
+        return ItemBookingModel(itemBooking).copy(isItemOwner = true)
     }
 
     fun cancelBooking(bookingUuid: UUID, userUuid: UUID): ItemBookingModel {
@@ -328,7 +329,74 @@ class ItemService {
             )
         )
 
-        return ItemBookingModel(itemBooking)
+        return ItemBookingModel(itemBooking).copy(isItemOwner = isOwner)
+    }
+
+    fun getItemBookingDates(itemUuid: UUID, userUuid: UUID): List<Pair<OffsetDateTime, OffsetDateTime>> {
+        val item = getItemByUuid(itemUuid) ?: throw EntityNotFoundException("No item for UUID: $itemUuid")
+        val isMember = UserCommunityRelation
+            .find("userUuid = ?1 AND communityUuid = ?2", userUuid, item.communityUuid)
+            .count() > 0
+        val isOwner = item.userUuid == userUuid
+        if (!isMember && !isOwner) throw CustomForbiddenException("User is not a member of the item's community")
+        return ItemBooking
+            .find("itemUuid = ?1 AND status = 'CONFIRMED'", itemUuid)
+            .list()
+            .map { Pair(it.startAt, it.endAt) }
+    }
+
+    fun getReceivedItemBookingsPage(
+        userUuid: UUID,
+        pageConfig: PageConfig,
+        sortBy: ItemBookingSortBy?,
+        sortDirection: Sort.Direction?
+    ): PageModel<ItemBookingModel> {
+        val sortByValue = sortBy?.value ?: ItemBookingSortBy.END_AT.value
+        val sortDirectionValue = sortDirection ?: Sort.Direction.Descending
+        val ownedItemUuids = Item.find("userUuid", userUuid).list().map { it.uuid }
+        if (ownedItemUuids.isEmpty()) return PageModel.empty()
+        val query = ItemBooking
+            .find(
+                "itemUuid IN ?1",
+                sort = Sort.by(sortByValue, sortDirectionValue),
+                ownedItemUuids
+            )
+            .page(Page.of(pageConfig.pageNumber, pageConfig.pageSize))
+        return PageModel.of(query) { ItemBookingModel(it).copy(isItemOwner = true) }
+    }
+
+    fun returnBooking(bookingUuid: UUID, userUuid: UUID): ItemBookingModel {
+        val itemBooking = ItemBooking.find("uuid", bookingUuid).firstResult()
+            ?: throw EntityNotFoundException("No item booking for UUID: $bookingUuid")
+        val item = getItemByUuid(itemBooking.itemUuid)
+            ?: throw EntityNotFoundException("No item for UUID: ${itemBooking.itemUuid}")
+
+        val isRequester = itemBooking.userUuid == userUuid
+        val isOwner = item.userUuid == userUuid
+        if (!isRequester && !isOwner) throw CustomBadRequestException(code = ErrorCode.BookingAccessDenied)
+        if (itemBooking.status != BookingStatus.CONFIRMED) {
+            throw CustomBadRequestException(code = ErrorCode.BookingNotReturnable)
+        }
+
+        itemBooking.status = BookingStatus.RETURNED
+        itemBooking.returnedBy = if (isOwner) CancelledBy.OWNER else CancelledBy.REQUESTER
+        itemBooking.returnedAt = OffsetDateTime.now()
+        itemBooking.persist()
+
+        val requester = User.find("uuid", itemBooking.userUuid).firstResult()
+        val requesterName = "${requester?.firstName ?: ""} ${requester?.lastName ?: ""}".trim()
+        val recipientUuid = if (isOwner) itemBooking.userUuid else item.userUuid
+        bookingEventSource.fireAsync(
+            BookingEvent(
+                notificationType = NotificationType.BOOKING_RETURNED,
+                recipientUserUuid = recipientUuid,
+                bookingUuid = itemBooking.uuid,
+                itemName = item.name,
+                requesterName = requesterName
+            )
+        )
+
+        return ItemBookingModel(itemBooking).copy(isItemOwner = isOwner)
     }
 
     private fun getItemByUuid(uuid: UUID): Item? {

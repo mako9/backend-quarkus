@@ -10,5 +10,6 @@ enum class ErrorCode(val code: String, val description: String) {
     ItemReserved("ITEM_RESERVED", "the requested item is already reserved at this time"),
     BookingNotPending("BOOKING_NOT_PENDING", "booking is not in pending status"),
     BookingNotCancellable("BOOKING_NOT_CANCELLABLE", "booking cannot be cancelled"),
-    BookingAccessDenied("BOOKING_ACCESS_DENIED", "user does not have access to this booking")
+    BookingAccessDenied("BOOKING_ACCESS_DENIED", "user does not have access to this booking"),
+    BookingNotReturnable("BOOKING_NOT_RETURNABLE", "booking cannot be returned (must be CONFIRMED)")
 }

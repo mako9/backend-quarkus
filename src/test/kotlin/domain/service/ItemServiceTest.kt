@@ -625,4 +625,131 @@ class ItemServiceTest {
         }
         assertEquals(listOf(ErrorCode.BookingNotCancellable), exception.codes)
     }
+
+    @Test
+    fun `when returning booking as requester, then status becomes RETURNED and returnedBy is REQUESTER`() {
+        val booking = entityUtil.setupItemBooking {
+            it.itemUuid = itemOne.uuid
+            it.userUuid = requestingUser.uuid
+            it.status = BookingStatus.CONFIRMED
+            it.startAt = OffsetDateTime.now().plusDays(1)
+            it.endAt = OffsetDateTime.now().plusDays(2)
+        }
+        val result = itemService.returnBooking(booking.uuid, requestingUser.uuid)
+        assertEquals(BookingStatus.RETURNED, result.status)
+        assertEquals(CancelledBy.REQUESTER, result.returnedBy)
+        assertNotNull(result.returnedAt)
+        assertFalse(result.isItemOwner)
+    }
+
+    @Test
+    fun `when returning booking as owner, then status becomes RETURNED and returnedBy is OWNER`() {
+        val booking = entityUtil.setupItemBooking {
+            it.itemUuid = itemOne.uuid
+            it.userUuid = requestingUser.uuid
+            it.status = BookingStatus.CONFIRMED
+            it.startAt = OffsetDateTime.now().plusDays(1)
+            it.endAt = OffsetDateTime.now().plusDays(2)
+        }
+        val result = itemService.returnBooking(booking.uuid, user.uuid)
+        assertEquals(BookingStatus.RETURNED, result.status)
+        assertEquals(CancelledBy.OWNER, result.returnedBy)
+        assertTrue(result.isItemOwner)
+    }
+
+    @Test
+    fun `when returning booking that is not CONFIRMED, then exception is thrown`() {
+        val booking = entityUtil.setupItemBooking {
+            it.itemUuid = itemOne.uuid
+            it.userUuid = requestingUser.uuid
+            it.status = BookingStatus.CANCELLED
+            it.startAt = OffsetDateTime.now().plusDays(1)
+            it.endAt = OffsetDateTime.now().plusDays(2)
+        }
+        val exception = assertThrows(CustomBadRequestException::class.java) {
+            itemService.returnBooking(booking.uuid, requestingUser.uuid)
+        }
+        assertEquals(listOf(ErrorCode.BookingNotReturnable), exception.codes)
+    }
+
+    @Test
+    fun `when returning booking as unrelated user, then exception is thrown`() {
+        val booking = entityUtil.setupItemBooking {
+            it.itemUuid = itemOne.uuid
+            it.userUuid = requestingUser.uuid
+            it.status = BookingStatus.CONFIRMED
+            it.startAt = OffsetDateTime.now().plusDays(1)
+            it.endAt = OffsetDateTime.now().plusDays(2)
+        }
+        assertThrows(CustomBadRequestException::class.java) {
+            itemService.returnBooking(booking.uuid, UUID.randomUUID())
+        }
+    }
+
+    @Test
+    fun `when getting received bookings page as item owner, then only bookings for owned items are returned`() {
+        val booking = entityUtil.setupItemBooking {
+            it.itemUuid = itemOne.uuid
+            it.userUuid = requestingUser.uuid
+            it.startAt = OffsetDateTime.now().plusDays(1)
+            it.endAt = OffsetDateTime.now().plusDays(2)
+        }
+        val result = itemService.getReceivedItemBookingsPage(user.uuid, PageConfig(0, 10), null, null)
+        assertTrue(result.content.any { it.uuid == booking.uuid })
+        assertTrue(result.content.all { it.isItemOwner })
+    }
+
+    @Test
+    fun `when getting received bookings page as non-owner, then empty page is returned`() {
+        entityUtil.setupItemBooking {
+            it.itemUuid = itemOne.uuid
+            it.userUuid = requestingUser.uuid
+            it.startAt = OffsetDateTime.now().plusDays(1)
+            it.endAt = OffsetDateTime.now().plusDays(2)
+        }
+        val result = itemService.getReceivedItemBookingsPage(requestingUser.uuid, PageConfig(0, 10), null, null)
+        assertTrue(result.content.isEmpty())
+    }
+
+    @Test
+    fun `when getting booking dates for item as community member, then confirmed date ranges are returned`() {
+        entityUtil.setupUserCommunityRelation {
+            it.userUuid = requestingUser.uuid
+            it.communityUuid = community.uuid
+        }
+        val booking = entityUtil.setupItemBooking {
+            it.itemUuid = itemOne.uuid
+            it.userUuid = requestingUser.uuid
+            it.status = BookingStatus.CONFIRMED
+            it.startAt = OffsetDateTime.now().plusDays(1)
+            it.endAt = OffsetDateTime.now().plusDays(3)
+        }
+        val result = itemService.getItemBookingDates(itemOne.uuid, requestingUser.uuid)
+        assertEquals(1, result.size)
+        assertOffsetDateTimeEquals(booking.startAt, result.first().first)
+    }
+
+    @Test
+    fun `when getting booking as item owner, then isItemOwner is true`() {
+        val booking = entityUtil.setupItemBooking {
+            it.itemUuid = itemOne.uuid
+            it.userUuid = requestingUser.uuid
+            it.startAt = OffsetDateTime.now().plusDays(1)
+            it.endAt = OffsetDateTime.now().plusDays(2)
+        }
+        val result = itemService.getItemBooking(user.uuid, booking.uuid)
+        assertTrue(result.isItemOwner)
+    }
+
+    @Test
+    fun `when getting booking as requester, then isItemOwner is false`() {
+        val booking = entityUtil.setupItemBooking {
+            it.itemUuid = itemOne.uuid
+            it.userUuid = requestingUser.uuid
+            it.startAt = OffsetDateTime.now().plusDays(1)
+            it.endAt = OffsetDateTime.now().plusDays(2)
+        }
+        val result = itemService.getItemBooking(requestingUser.uuid, booking.uuid)
+        assertFalse(result.isItemOwner)
+    }
 }
