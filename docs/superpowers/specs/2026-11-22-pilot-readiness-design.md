@@ -48,7 +48,7 @@ the pilot is for **real neighbours**, not a recruiter demo. If that is wrong, se
 | `flutter analyze` | no issues |
 | `flutter test` | 119 pass |
 | `mvnw -DskipTests package` | **BUILD SUCCESS**, `target/quarkus-app` 69 MB — first time it has existed |
-| `java -jar target/quarkus-app/quarkus-run.jar` | **starts in 2.4 s, profile `prod`**, runs Liquibase. Then every route, including `/q/health` and `/q/openapi`, answers **500** — see finding 0 |
+| `java -jar target/quarkus-app/quarkus-run.jar` | **starts in 2.4 s, profile `prod`**, runs Liquibase. Then every route, including `/q/health` and `/q/openapi`, answers **500** — see finding 0. *Measured again 2026-11-23 with the realm running: `/q/openapi` answers 200 and `/q/health` answers **404 always** — there is no `quarkus-smallrye-health` dependency, so no health endpoint exists; finding 0's correction is the current statement* |
 | Docker daemon | up (29.9.3, Docker Desktop, `HTTP Proxy: http.docker.internal:3128`); pulls work |
 | Local PostgreSQL on :5432 | up, host process (not containerised); databases `quarkus` (dev/prod-local) and `quarkus_test` (tests) |
 
@@ -548,7 +548,9 @@ Then the gates:
   noting that a host `postgres` is already listening on 5432, so the compose mapping needs a
   non-conflicting port or the host service stopped. Documented as the one-time local setup. This is
   also what makes the packaged jar answer anything at all: with Keycloak down, every route including
-  `/q/health` returns 500 (finding 0).
+  `/q/health` returns 500 (finding 0). *Corrected while executing: `/q/health` answers 404 whatever Keycloak
+  does, because there is no health endpoint at all — Phase 5 has to add `quarkus-smallrye-health` before it can
+  write a healthcheck.*
 - Backend: keep Testcontainers in CI (runners have working egress). Only if the egress fault
   proves permanent does `mvn test` need to run against the compose stack instead, which takes
   more than `-Dquarkus.keycloak.devservices.enabled=false`: `quarkus.oidc.auth-server-url` is
