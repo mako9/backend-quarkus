@@ -41,7 +41,7 @@ data class ItemDetailDto(
     var description: String?,
     var isOwner: Boolean = false,
     var communityName: String?,
-    val requiresApproval: Boolean = false
+    val requiresApproval: Boolean = true
 ) {
 
     constructor(itemModel: ItemModel) : this(
@@ -75,7 +75,7 @@ data class ItemRequestDto(
     var availability: List<ItemTimeIntervalDto> = emptyList(),
     var availableUntil: OffsetDateTime? = null,
     var description: String? = null,
-    val requiresApproval: Boolean = false
+    val requiresApproval: Boolean = true
 )
 
 data class ItemBookingRequestDto(

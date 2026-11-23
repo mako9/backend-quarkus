@@ -459,6 +459,24 @@ class ItemServiceTest {
     }
 
     @Test
+    fun `when inserting an item without requiresApproval, then approval is required`() {
+        val created = itemService.insertItem(
+            ItemModel(
+                uuid = UUID.randomUUID(),
+                name = "ladder",
+                categories = listOf(ItemCategory.OTHER),
+                communityUuid = community.uuid,
+                userUuid = user.uuid,
+                availability = emptyList(),
+                description = null
+            )
+        )
+
+        assertTrue(created.requiresApproval)
+        assertEquals(true, Item.find("uuid", created.uuid).firstResult()?.requiresApproval)
+    }
+
+    @Test
     fun `when booking item with requiresApproval, then booking is created with PENDING status`() {
         val item = entityUtil.setupItem {
             it.communityUuid = community.uuid

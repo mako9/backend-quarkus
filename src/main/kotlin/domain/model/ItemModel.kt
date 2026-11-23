@@ -21,7 +21,7 @@ data class ItemModel(
     var availableUntil: OffsetDateTime? = null,
     var description: String?,
     var communityModel: CommunityModel? = null,
-    var requiresApproval: Boolean = false
+    var requiresApproval: Boolean = true
 ) {
 
     constructor(item: Item) : this(
