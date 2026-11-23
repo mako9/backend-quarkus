@@ -1102,6 +1102,58 @@ runtime has the Kotlin module, and Task 8 proved the wire format by hand. The au
 check is Phase 5's, because that is the first job that runs the artifact automatically. This is recorded in the
 spec's Phase 1 status note so it is not inherited as a surprise.
 
+### Review round after Task 10
+
+One fresh-context reviewer, whole Phase 1 range in all three repos, on the four review packages. Two blocking
+findings, both verified before anything was changed, both fixed; four minor items fixed; two claims of the
+reviewer's own disproved; one blocking sub-item declined for plan 2c with its evidence recorded instead.
+
+**Blocking, fixed.**
+
+- *`availability` still disagrees across the repos, and the spec said it did not.* The spec sentence was the
+  real Phase 1 defect: I wrote "Phase 2 starts from one format, not two" when only the `is*` booleans had been
+  unified. Corrected, with the measurements that show what is still split. The web type this phase grew
+  (`{startAt, endAt}`) was wrong against `ItemTimeIntervalDto` — `3540200` gives it the four real fields, and
+  the artifact was probed to get them right: `[{"startDayOfWeek":1,"endDayOfWeek":3,"startTimeAt":"09:00Z",
+  "endTimeAt":"17:00Z"}]`, and an interval with unknown keys is a 400, not ignored, so an exact type matters
+  because `ownedItem.tsx` posts the array straight back.
+- *An unconfigured packaged run migrates the developer's own database.* The runbook warned about it; the
+  reviewer pointed out that a safe default beats a warning, and that is right — this phase is the one that made
+  the jar the documented way to run the backend. `d50e638` defaults the URL to the throwaway database on 5433;
+  verified by booting with no datasource environment at all and finding the write in the 5433 database, absent
+  from 5432, whose changelog is unchanged. Suite re-ran at 149/0 skipped. `a44e873` also binds the compose
+  stack's two published ports to loopback: postgres and the Keycloak admin console were reachable from the LAN
+  with their dev credentials.
+
+**Declined, with the evidence kept.** The mobile half of `availability` — a `String?` field that receives a JSON
+array, so `Item.fromJson` throws on every real response, and a `toJson` that always sends `null`, which the
+artifact answers with 400. I probed rather than assumed, including against the pre-Phase-1 artifact built in a
+throwaway worktree at `0d9aea6`: null availability is a 400 there too, so this phase did not cause it, and the
+old artifact was worse in one case (it 400'd when the key was *omitted*). Fixing it properly is a model decision
+(what the mobile app does with a weekly window — there is no availability UI on mobile) and the spec already
+assigns it to plan 2c, so Phase 1 does not absorb it unilaterally. What it does do is hand 2c the repro:
+runbook "What does not work" 8 and 9, the availability bullet in Phase 2's defect list rewritten, and the
+Finding 0 note no longer claiming the problem is gone. **Net effect on the pilot: mobile item detail and mobile
+item create/edit have never worked against any backend. That is bigger than this phase's report should make it
+look, and it raises 2c's priority.**
+
+**Minor, fixed.** `.env.example` described `backend-service` as a public client and told the reader not to reuse
+the backend's secret — the realm has one confidential client for both apps and the app will not start without
+the value (`1731df7`). A build with no `BACKEND_BASE_URL` now fails with a message instead of shipping
+`undefined/user/...` (`8deda62`, verified red and green). The runbook's web section told people to copy
+`.env.example`, which points sign-in at `auth.example.org` — it now says `.env.development`, adds the
+`adb reverse` lines the emulator needs, says which ports are loopback-only, and says the test suite is the one
+thing that *does* use the host postgres on 5432. And the Finding 0 note's line numbers were stale, because
+`f2cfaaf` reflowed the Flutter files after the rename; they now match, with a note about why they moved.
+
+**Reviewer claims disproved, recorded so nobody re-chases them.** (a) "The classpath gate could be fooled by a
+stale jar in `lib/main` when packaging without `clean`" — set the scope back to `test`, ran
+`./mvnw -DskipTests package` with no `clean`: Quarkus empties `target/quarkus-app`, the kotlin jar was gone and
+the gate said FAIL. (b) "Confirm `assets/config/config.yaml` is actually tracked" — `git ls-files` shows it is,
+ignore rule at line 56 notwithstanding, so a fresh checkout has a config. (c) The reviewer's own note that it
+had no shell and read files at the tips rather than commit diffs: the tips were clean at the time, so that holds
+for the code, and everything it marked "unverified" is now measured.
+
 ### Still open, and not this phase's to answer
 
 - **Spec open question 16**: whether Phase 0's retroactive approval backfill (`mario:7`) flips items that
