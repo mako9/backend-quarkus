@@ -55,4 +55,9 @@ jobs:
         sudo apt-get install --yes postgresql-client
       
     - name: Run tests
-      run: mvn clean test
+      run: ./mvnw -B clean test
+
+    # Surefire reports an unavailable container runtime as SKIPPED, and maven calls that success.
+    # Without this step a green check can mean the whole HTTP layer never ran.
+    - name: Gate on skipped tests
+      run: ./scripts/ci-check-tests.sh
