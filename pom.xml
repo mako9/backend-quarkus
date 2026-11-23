@@ -113,7 +113,10 @@
         <dependency>
             <groupId>com.fasterxml.jackson.module</groupId>
             <artifactId>jackson-module-kotlin</artifactId>
-            <scope>test</scope>
+            <!-- runtime, not test: without it Jackson strips the `is` prefix from Kotlin boolean
+                 properties, so the shipped jar answered `active`/`owner`/`admin`/`firstPage` while every
+                 test in the repo asserted isItemOwner/isActive/isAdmin and passed. scripts/
+                 check-runtime-classpath.sh keeps it that way. -->
         </dependency>
     </dependencies>
 

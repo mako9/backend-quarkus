@@ -25,6 +25,7 @@ import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import testUtils.AssertUtil.assertEventually
 import testUtils.AssertUtil.assertOffsetDateTimeEquals
 import testUtils.EntityUtil
 import testUtils.UnitTestProfile
@@ -51,6 +52,7 @@ class ItemServiceTest {
 
     private lateinit var user: User
     private lateinit var requestingUser: User
+    private lateinit var otherUser: User
     private lateinit var community: Community
     private lateinit var itemOne: Item
     private lateinit var itemTwo: Item
@@ -63,6 +65,7 @@ class ItemServiceTest {
     fun beforeEach() {
         user = entityUtil.setupUser()
         requestingUser = entityUtil.setupUser()
+        otherUser = entityUtil.setupUser()
         community = entityUtil.setupCommunity()
         itemOne = entityUtil.setupItem {
             it.name = "aaa"; it.communityUuid = community.uuid; it.userUuid = user.uuid; it.city =
@@ -373,6 +376,23 @@ class ItemServiceTest {
     }
 
     @Test
+    fun `when booking an item that needs no approval, then the owner is notified with ITEM_BOOKED`() {
+        itemService.bookItem(
+            itemOne.uuid,
+            requestingUser.uuid,
+            OffsetDateTime.now().plusDays(1),
+            OffsetDateTime.now().plusDays(2)
+        )
+
+        // notification types are compared by name, so this test compiles before the enum value exists
+        assertEventually("expected an ITEM_BOOKED notification for the item owner") {
+            Notification.find("userUuid = ?1", user.uuid).list().any { it.type.name == "ITEM_BOOKED" }
+        }
+        // the confirmation still belongs to the requester, not to the owner
+        assertFalse(Notification.find("userUuid = ?1", user.uuid).list().any { it.type.name == "BOOKING_CONFIRMED" })
+    }
+
+    @Test
     fun `when booking item with invalid params, then correct error is thrown`() {
         val exception = assertThrows(CustomBadRequestException::class.java) {
             itemService.bookItem(
@@ -439,6 +459,24 @@ class ItemServiceTest {
     }
 
     @Test
+    fun `when inserting an item without requiresApproval, then approval is required`() {
+        val created = itemService.insertItem(
+            ItemModel(
+                uuid = UUID.randomUUID(),
+                name = "ladder",
+                categories = listOf(ItemCategory.OTHER),
+                communityUuid = community.uuid,
+                userUuid = user.uuid,
+                availability = emptyList(),
+                description = null
+            )
+        )
+
+        assertTrue(created.requiresApproval)
+        assertEquals(true, Item.find("uuid", created.uuid).firstResult()?.requiresApproval)
+    }
+
+    @Test
     fun `when booking item with requiresApproval, then booking is created with PENDING status`() {
         val item = entityUtil.setupItem {
             it.communityUuid = community.uuid
@@ -497,6 +535,77 @@ class ItemServiceTest {
 
         val storedBooking = ItemBooking.find("uuid", booking.uuid).firstResult()
         assertEquals(BookingStatus.CONFIRMED, storedBooking?.status)
+    }
+
+    @Test
+    fun `when approving a booking whose slot was already confirmed, then ITEM_RESERVED is thrown`() {
+        val item = entityUtil.setupItem { it.communityUuid = community.uuid; it.userUuid = user.uuid }
+        val first = entityUtil.setupItemBooking {
+            it.itemUuid = item.uuid; it.userUuid = requestingUser.uuid; it.status = BookingStatus.PENDING
+            it.startAt = OffsetDateTime.now().plusDays(1); it.endAt = OffsetDateTime.now().plusDays(2)
+        }
+        val second = entityUtil.setupItemBooking {
+            it.itemUuid = item.uuid; it.userUuid = otherUser.uuid; it.status = BookingStatus.PENDING
+            it.startAt = OffsetDateTime.now().plusDays(1); it.endAt = OffsetDateTime.now().plusDays(2)
+        }
+
+        itemService.approveBooking(first.uuid, user.uuid)
+
+        val exception = assertThrows(CustomBadRequestException::class.java) {
+            itemService.approveBooking(second.uuid, user.uuid)
+        }
+        assertEquals(listOf(ErrorCode.ItemReserved), exception.codes)
+        // the refused request stays pending for the other requester to be declined, it is not silently lost
+        assertEquals(BookingStatus.PENDING, ItemBooking.find("uuid", second.uuid).firstResult()?.status)
+    }
+
+    @Test
+    fun `when approving one of two overlapping pending requests, then the other is refused`() {
+        // nothing stops several neighbours asking for the same days - that arbitrating is what approval
+        // is for. So the first approval must succeed, and only once it has, the rival becomes unservable.
+        val item = entityUtil.setupItem { it.communityUuid = community.uuid; it.userUuid = user.uuid }
+        val first = entityUtil.setupItemBooking {
+            it.itemUuid = item.uuid; it.userUuid = requestingUser.uuid; it.status = BookingStatus.PENDING
+            it.startAt = OffsetDateTime.now().plusDays(1); it.endAt = OffsetDateTime.now().plusDays(2)
+        }
+        val rival = entityUtil.setupItemBooking {
+            it.itemUuid = item.uuid; it.userUuid = otherUser.uuid; it.status = BookingStatus.PENDING
+            it.startAt = OffsetDateTime.now().plusDays(1); it.endAt = OffsetDateTime.now().plusDays(2)
+        }
+
+        assertEquals(BookingStatus.CONFIRMED, itemService.approveBooking(first.uuid, user.uuid).status)
+
+        val exception = assertThrows(CustomBadRequestException::class.java) {
+            itemService.approveBooking(rival.uuid, user.uuid)
+        }
+        assertEquals(listOf(ErrorCode.ItemReserved), exception.codes)
+        assertEquals(BookingStatus.PENDING, ItemBooking.find("uuid", rival.uuid).firstResult()?.status)
+    }
+
+    @Test
+    fun `when approving a booking with no overlap, then it becomes CONFIRMED`() {
+        val item = entityUtil.setupItem { it.communityUuid = community.uuid; it.userUuid = user.uuid }
+        entityUtil.setupItemBooking {
+            it.itemUuid = item.uuid; it.userUuid = requestingUser.uuid; it.status = BookingStatus.CONFIRMED
+            it.startAt = OffsetDateTime.now().plusDays(1); it.endAt = OffsetDateTime.now().plusDays(2)
+        }
+        val booking = entityUtil.setupItemBooking {
+            it.itemUuid = item.uuid; it.userUuid = otherUser.uuid; it.status = BookingStatus.PENDING
+            it.startAt = OffsetDateTime.now().plusDays(3); it.endAt = OffsetDateTime.now().plusDays(4)
+        }
+
+        assertEquals(BookingStatus.CONFIRMED, itemService.approveBooking(booking.uuid, user.uuid).status)
+    }
+
+    @Test
+    fun `when approving a booking, then its own pending row is not counted as a conflict`() {
+        val item = entityUtil.setupItem { it.communityUuid = community.uuid; it.userUuid = user.uuid }
+        val booking = entityUtil.setupItemBooking {
+            it.itemUuid = item.uuid; it.userUuid = requestingUser.uuid; it.status = BookingStatus.PENDING
+            it.startAt = OffsetDateTime.now().plusDays(1); it.endAt = OffsetDateTime.now().plusDays(2)
+        }
+
+        assertEquals(BookingStatus.CONFIRMED, itemService.approveBooking(booking.uuid, user.uuid).status)
     }
 
     @Test
@@ -624,5 +733,152 @@ class ItemServiceTest {
             itemService.cancelBooking(booking.uuid, requestingUser.uuid)
         }
         assertEquals(listOf(ErrorCode.BookingNotCancellable), exception.codes)
+    }
+
+    @Test
+    fun `when returning booking as requester, then status becomes RETURNED and returnedBy is REQUESTER`() {
+        val booking = entityUtil.setupItemBooking {
+            it.itemUuid = itemOne.uuid
+            it.userUuid = requestingUser.uuid
+            it.status = BookingStatus.CONFIRMED
+            it.startAt = OffsetDateTime.now().minusDays(1)
+            it.endAt = OffsetDateTime.now().plusDays(2)
+        }
+        val result = itemService.returnBooking(booking.uuid, requestingUser.uuid)
+        assertEquals(BookingStatus.RETURNED, result.status)
+        assertEquals(CancelledBy.REQUESTER, result.returnedBy)
+        assertNotNull(result.returnedAt)
+        assertFalse(result.isItemOwner)
+    }
+
+    @Test
+    fun `when returning booking as owner, then status becomes RETURNED and returnedBy is OWNER`() {
+        val booking = entityUtil.setupItemBooking {
+            it.itemUuid = itemOne.uuid
+            it.userUuid = requestingUser.uuid
+            it.status = BookingStatus.CONFIRMED
+            it.startAt = OffsetDateTime.now().minusDays(2)
+            it.endAt = OffsetDateTime.now().minusDays(1)
+        }
+        val result = itemService.returnBooking(booking.uuid, user.uuid)
+        assertEquals(BookingStatus.RETURNED, result.status)
+        assertEquals(CancelledBy.OWNER, result.returnedBy)
+        assertTrue(result.isItemOwner)
+    }
+
+    @Test
+    fun `when returning booking that is not CONFIRMED, then exception is thrown`() {
+        val booking = entityUtil.setupItemBooking {
+            it.itemUuid = itemOne.uuid
+            it.userUuid = requestingUser.uuid
+            it.status = BookingStatus.CANCELLED
+            it.startAt = OffsetDateTime.now().plusDays(1)
+            it.endAt = OffsetDateTime.now().plusDays(2)
+        }
+        val exception = assertThrows(CustomBadRequestException::class.java) {
+            itemService.returnBooking(booking.uuid, requestingUser.uuid)
+        }
+        assertEquals(listOf(ErrorCode.BookingNotReturnable), exception.codes)
+    }
+
+    // "returned" is the statement that the item is back with its owner. Before the rental has started
+    // there is nothing to hand back, and the booking that was wanted is a cancelled one.
+    @Test
+    fun `when returning a booking whose rental has not started, then exception is thrown`() {
+        val booking = entityUtil.setupItemBooking {
+            it.itemUuid = itemOne.uuid
+            it.userUuid = requestingUser.uuid
+            it.status = BookingStatus.CONFIRMED
+            it.startAt = OffsetDateTime.now().plusDays(1)
+            it.endAt = OffsetDateTime.now().plusDays(2)
+        }
+
+        val exception = assertThrows(CustomBadRequestException::class.java) {
+            itemService.returnBooking(booking.uuid, requestingUser.uuid)
+        }
+
+        assertEquals(listOf(ErrorCode.BookingNotReturnable), exception.codes)
+        assertEquals(BookingStatus.CONFIRMED, ItemBooking.find("uuid", booking.uuid).firstResult()!!.status)
+    }
+
+    @Test
+    fun `when returning booking as unrelated user, then exception is thrown`() {
+        val booking = entityUtil.setupItemBooking {
+            it.itemUuid = itemOne.uuid
+            it.userUuid = requestingUser.uuid
+            it.status = BookingStatus.CONFIRMED
+            it.startAt = OffsetDateTime.now().minusDays(2)
+            it.endAt = OffsetDateTime.now().minusDays(1)
+        }
+        assertThrows(CustomBadRequestException::class.java) {
+            itemService.returnBooking(booking.uuid, UUID.randomUUID())
+        }
+    }
+
+    @Test
+    fun `when getting received bookings page as item owner, then only bookings for owned items are returned`() {
+        val booking = entityUtil.setupItemBooking {
+            it.itemUuid = itemOne.uuid
+            it.userUuid = requestingUser.uuid
+            it.startAt = OffsetDateTime.now().plusDays(1)
+            it.endAt = OffsetDateTime.now().plusDays(2)
+        }
+        val result = itemService.getReceivedItemBookingsPage(user.uuid, PageConfig(0, 10), null, null)
+        assertTrue(result.content.any { it.uuid == booking.uuid })
+        assertTrue(result.content.all { it.isItemOwner })
+    }
+
+    @Test
+    fun `when getting received bookings page as non-owner, then empty page is returned`() {
+        entityUtil.setupItemBooking {
+            it.itemUuid = itemOne.uuid
+            it.userUuid = requestingUser.uuid
+            it.startAt = OffsetDateTime.now().plusDays(1)
+            it.endAt = OffsetDateTime.now().plusDays(2)
+        }
+        val result = itemService.getReceivedItemBookingsPage(requestingUser.uuid, PageConfig(0, 10), null, null)
+        assertTrue(result.content.isEmpty())
+    }
+
+    @Test
+    fun `when getting booking dates for item as community member, then confirmed date ranges are returned`() {
+        entityUtil.setupUserCommunityRelation {
+            it.userUuid = requestingUser.uuid
+            it.communityUuid = community.uuid
+        }
+        val booking = entityUtil.setupItemBooking {
+            it.itemUuid = itemOne.uuid
+            it.userUuid = requestingUser.uuid
+            it.status = BookingStatus.CONFIRMED
+            it.startAt = OffsetDateTime.now().plusDays(1)
+            it.endAt = OffsetDateTime.now().plusDays(3)
+        }
+        val result = itemService.getItemBookingDates(itemOne.uuid, requestingUser.uuid)
+        assertEquals(1, result.size)
+        assertOffsetDateTimeEquals(booking.startAt, result.first().first)
+    }
+
+    @Test
+    fun `when getting booking as item owner, then isItemOwner is true`() {
+        val booking = entityUtil.setupItemBooking {
+            it.itemUuid = itemOne.uuid
+            it.userUuid = requestingUser.uuid
+            it.startAt = OffsetDateTime.now().plusDays(1)
+            it.endAt = OffsetDateTime.now().plusDays(2)
+        }
+        val result = itemService.getItemBooking(user.uuid, booking.uuid)
+        assertTrue(result.isItemOwner)
+    }
+
+    @Test
+    fun `when getting booking as requester, then isItemOwner is false`() {
+        val booking = entityUtil.setupItemBooking {
+            it.itemUuid = itemOne.uuid
+            it.userUuid = requestingUser.uuid
+            it.startAt = OffsetDateTime.now().plusDays(1)
+            it.endAt = OffsetDateTime.now().plusDays(2)
+        }
+        val result = itemService.getItemBooking(requestingUser.uuid, booking.uuid)
+        assertFalse(result.isItemOwner)
     }
 }

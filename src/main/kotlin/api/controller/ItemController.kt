@@ -224,6 +224,24 @@ class ItemController : Controller() {
     }
 
     @GET
+    @Path("/booking/received")
+    fun getReceivedItemBookings(
+        @QueryParam("pageNumber") @Min(0) pageNumber: Int?,
+        @QueryParam("pageSize") @Range(min = 1, max = 100) pageSize: Int?,
+        @QueryParam("sortBy") sortBy: ItemBookingSortBy?,
+        @QueryParam("sortDirection") sortDirection: Sort.Direction?,
+    ): PageDto<ItemBookingDto> {
+        val userUuid = getUserUuid()
+        val page = itemService.getReceivedItemBookingsPage(
+            userUuid,
+            PageConfig(pageNumber, pageSize),
+            sortBy,
+            sortDirection
+        )
+        return PageDto.of(page, ::ItemBookingDto)
+    }
+
+    @GET
     @Path("/{uuid}/booking")
     fun getItemBookingsOfItem(
         @RestPath uuid: UUID,
@@ -241,6 +259,16 @@ class ItemController : Controller() {
             sortDirection
         )
         return PageDto.of(itemBookingsPage, ::ItemBookingDto)
+    }
+
+    @GET
+    @Path("/{uuid}/booking/dates")
+    fun getItemBookingDates(
+        @RestPath uuid: UUID
+    ): List<ItemBookingDateRangeDto> {
+        val userUuid = getUserUuid()
+        return itemService.getItemBookingDates(uuid, userUuid)
+            .map { (startAt, endAt) -> ItemBookingDateRangeDto(startAt, endAt) }
     }
 
     @GET
@@ -298,6 +326,16 @@ class ItemController : Controller() {
     ): ItemBookingDto {
         val userUuid = getUserUuid()
         val itemBookingModel = itemService.cancelBooking(uuid, userUuid)
+        return ItemBookingDto(itemBookingModel)
+    }
+
+    @PATCH
+    @Path("/booking/{uuid}/return")
+    fun returnBooking(
+        @RestPath uuid: UUID
+    ): ItemBookingDto {
+        val userUuid = getUserUuid()
+        val itemBookingModel = itemService.returnBooking(uuid, userUuid)
         return ItemBookingDto(itemBookingModel)
     }
 

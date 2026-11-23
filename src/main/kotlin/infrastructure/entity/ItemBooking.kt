@@ -53,6 +53,13 @@ class ItemBooking : PanacheEntityBase {
     @Column(name = "cancelled_at")
     var cancelledAt: OffsetDateTime? = null
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "returned_by")
+    var returnedBy: CancelledBy? = null
+
+    @Column(name = "returned_at")
+    var returnedAt: OffsetDateTime? = null
+
     constructor(
         itemUuid: UUID,
         userUuid: UUID,

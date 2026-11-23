@@ -421,8 +421,8 @@ class ItemControllerTest {
             assertEquals(1, jsonPath.getInt("totalPages"))
             assertEquals(
                 listOf(
-                    ItemBookingDto(ItemBookingModel(ItemBooking.find("uuid", bookingTwo.uuid).singleResult())),
-                    ItemBookingDto(ItemBookingModel(ItemBooking.find("uuid", bookingOne.uuid).singleResult()))
+                    ItemBookingDto(ItemBookingModel(ItemBooking.find("uuid", bookingTwo.uuid).singleResult()).copy(isItemOwner = true)),
+                    ItemBookingDto(ItemBookingModel(ItemBooking.find("uuid", bookingOne.uuid).singleResult()).copy(isItemOwner = true))
                 ),
                 jsonPath.using(kotlinJsonPathConfig).getList("content", ItemBookingDto::class.java)
             )
@@ -451,7 +451,7 @@ class ItemControllerTest {
             assertEquals(2, jsonPath.getInt("totalPages"))
             assertEquals(
                 listOf(
-                    ItemBookingDto(ItemBookingModel(ItemBooking.find("uuid", bookingOne.uuid).singleResult()))
+                    ItemBookingDto(ItemBookingModel(ItemBooking.find("uuid", bookingOne.uuid).singleResult()).copy(isItemOwner = true))
                 ),
                 jsonPath.using(kotlinJsonPathConfig).getList("content", ItemBookingDto::class.java)
             )
@@ -517,6 +517,73 @@ class ItemControllerTest {
             .jsonPath()
 
         assertEquals(listOf(ErrorCode.InvalidInputParam.code), jsonPath.getList("codes", String::class.java))
+    }
+
+    @Test
+    fun `when returning booking as requester, then status 200 and RETURNED status is returned`() {
+        val jsonPath = RestAssured.given().auth().oauth2(accessToken)
+            .contentType(ContentType.JSON)
+            .patch("/api/user/item/booking/${itemBooking.uuid}/return")
+            .then()
+            .statusCode(200)
+            .extract()
+            .response()
+            .jsonPath()
+        assertEquals("RETURNED", jsonPath.getString("status"))
+        assertEquals("REQUESTER", jsonPath.getString("returnedBy"))
+        assertEquals(false, jsonPath.getBoolean("isItemOwner"))
+    }
+
+    @Test
+    fun `when returning booking that is not CONFIRMED, then status 400 is returned`() {
+        val pendingBooking = entityUtil.setupItemBooking {
+            it.itemUuid = item.uuid
+            it.userUuid = user.uuid
+            it.status = common.BookingStatus.PENDING
+            it.startAt = OffsetDateTime.now().plusDays(1)
+            it.endAt = OffsetDateTime.now().plusDays(2)
+        }
+        RestAssured.given().auth().oauth2(accessToken)
+            .contentType(ContentType.JSON)
+            .patch("/api/user/item/booking/${pendingBooking.uuid}/return")
+            .then()
+            .statusCode(400)
+    }
+
+    @Test
+    fun `when getting received bookings as item owner, then status 200 and bookings with isItemOwner true are returned`() {
+        val ownedItem = entityUtil.setupItem { it.userUuid = user.uuid; it.communityUuid = community.uuid }
+        val requester = entityUtil.setupUser()
+        entityUtil.setupItemBooking {
+            it.itemUuid = ownedItem.uuid
+            it.userUuid = requester.uuid
+            it.startAt = OffsetDateTime.now().plusDays(1)
+            it.endAt = OffsetDateTime.now().plusDays(2)
+        }
+        val jsonPath = RestAssured.given().auth().oauth2(accessToken)
+            .contentType(ContentType.JSON)
+            .`when`()["/api/user/item/booking/received"]
+            .then()
+            .statusCode(200)
+            .extract()
+            .response()
+            .jsonPath()
+        assertTrue(jsonPath.getInt("totalElements") >= 1)
+        assertEquals(true, jsonPath.getBoolean("content[0].isItemOwner"))
+    }
+
+    @Test
+    fun `when getting booking dates for item in my community, then status 200 and date ranges are returned`() {
+        val jsonPath = RestAssured.given().auth().oauth2(accessToken)
+            .contentType(ContentType.JSON)
+            .`when`()["/api/user/item/${item.uuid}/booking/dates"]
+            .then()
+            .statusCode(200)
+            .extract()
+            .response()
+            .jsonPath()
+        assertEquals(1, jsonPath.getList<Any>("").size)
+        assertTrue(jsonPath.getString("[0].startAt") != null)
     }
 
     companion object {

@@ -19,6 +19,7 @@ import infrastructure.entity.Item
 import infrastructure.entity.ItemBooking
 import infrastructure.entity.ItemImage
 import infrastructure.entity.User
+import infrastructure.entity.UserCommunityRelation
 import io.quarkus.panache.common.Page
 import io.quarkus.panache.common.Sort
 import jakarta.enterprise.context.ApplicationScoped
@@ -196,7 +197,7 @@ class ItemService {
                 itemUuid
             )
             .page(Page.of(pageConfig.pageNumber, pageConfig.pageSize))
-        return PageModel.of(query, ::ItemBookingModel)
+        return PageModel.of(query) { ItemBookingModel(it).copy(isItemOwner = true) }
     }
 
     fun getItemBooking(
@@ -210,7 +211,7 @@ class ItemService {
         val isRequester = itemBooking.userUuid == userUuid
         val isOwner = item?.userUuid == userUuid
         if (!isRequester && !isOwner) throw CustomBadRequestException(code = ErrorCode.BookingAccessDenied)
-        return ItemBookingModel(itemBooking)
+        return ItemBookingModel(itemBooking).copy(isItemOwner = isOwner)
     }
 
     fun bookItem(itemUuid: UUID, userUuid: UUID, startAt: OffsetDateTime, endAt: OffsetDateTime): ItemBookingModel {
@@ -242,6 +243,21 @@ class ItemService {
             )
         )
 
+        // The event above reaches exactly one of the two parties. For an item that needs no approval it
+        // confirms the booking to the requester, which leaves the owner with no idea that their item is
+        // spoken for - so tell them too.
+        if (status == BookingStatus.CONFIRMED) {
+            bookingEventSource.fireAsync(
+                BookingEvent(
+                    notificationType = NotificationType.ITEM_BOOKED,
+                    recipientUserUuid = item.userUuid,
+                    bookingUuid = itemBooking.uuid,
+                    itemName = item.name,
+                    requesterName = requesterName
+                )
+            )
+        }
+
         return ItemBookingModel(itemBooking)
     }
 
@@ -252,6 +268,7 @@ class ItemService {
             ?: throw EntityNotFoundException("No item for UUID: ${itemBooking.itemUuid}")
         if (item.userUuid != userUuid) throw CustomForbiddenException("User is not the owner of item: ${item.uuid}")
         if (itemBooking.status != BookingStatus.PENDING) throw CustomBadRequestException(code = ErrorCode.BookingNotPending)
+        assertNoConfirmedOverlap(itemBooking.itemUuid, itemBooking.startAt, itemBooking.endAt, itemBooking.uuid)
 
         itemBooking.status = BookingStatus.CONFIRMED
         itemBooking.persist()
@@ -268,7 +285,7 @@ class ItemService {
             )
         )
 
-        return ItemBookingModel(itemBooking)
+        return ItemBookingModel(itemBooking).copy(isItemOwner = true)
     }
 
     fun declineBooking(bookingUuid: UUID, userUuid: UUID): ItemBookingModel {
@@ -294,7 +311,7 @@ class ItemService {
             )
         )
 
-        return ItemBookingModel(itemBooking)
+        return ItemBookingModel(itemBooking).copy(isItemOwner = true)
     }
 
     fun cancelBooking(bookingUuid: UUID, userUuid: UUID): ItemBookingModel {
@@ -328,7 +345,76 @@ class ItemService {
             )
         )
 
-        return ItemBookingModel(itemBooking)
+        return ItemBookingModel(itemBooking).copy(isItemOwner = isOwner)
+    }
+
+    fun getItemBookingDates(itemUuid: UUID, userUuid: UUID): List<Pair<OffsetDateTime, OffsetDateTime>> {
+        val item = getItemByUuid(itemUuid) ?: throw EntityNotFoundException("No item for UUID: $itemUuid")
+        val isMember = UserCommunityRelation
+            .find("userUuid = ?1 AND communityUuid = ?2", userUuid, item.communityUuid)
+            .count() > 0
+        val isOwner = item.userUuid == userUuid
+        if (!isMember && !isOwner) throw CustomForbiddenException("User is not a member of the item's community")
+        return ItemBooking
+            .find("itemUuid = ?1 AND status = 'CONFIRMED'", itemUuid)
+            .list()
+            .map { Pair(it.startAt, it.endAt) }
+    }
+
+    fun getReceivedItemBookingsPage(
+        userUuid: UUID,
+        pageConfig: PageConfig,
+        sortBy: ItemBookingSortBy?,
+        sortDirection: Sort.Direction?
+    ): PageModel<ItemBookingModel> {
+        val sortByValue = sortBy?.value ?: ItemBookingSortBy.END_AT.value
+        val sortDirectionValue = sortDirection ?: Sort.Direction.Descending
+        val ownedItemUuids = Item.find("userUuid", userUuid).list().map { it.uuid }
+        if (ownedItemUuids.isEmpty()) return PageModel.empty()
+        val query = ItemBooking
+            .find(
+                "itemUuid IN ?1",
+                sort = Sort.by(sortByValue, sortDirectionValue),
+                ownedItemUuids
+            )
+            .page(Page.of(pageConfig.pageNumber, pageConfig.pageSize))
+        return PageModel.of(query) { ItemBookingModel(it).copy(isItemOwner = true) }
+    }
+
+    fun returnBooking(bookingUuid: UUID, userUuid: UUID): ItemBookingModel {
+        val itemBooking = ItemBooking.find("uuid", bookingUuid).firstResult()
+            ?: throw EntityNotFoundException("No item booking for UUID: $bookingUuid")
+        val item = getItemByUuid(itemBooking.itemUuid)
+            ?: throw EntityNotFoundException("No item for UUID: ${itemBooking.itemUuid}")
+
+        val isRequester = itemBooking.userUuid == userUuid
+        val isOwner = item.userUuid == userUuid
+        if (!isRequester && !isOwner) throw CustomBadRequestException(code = ErrorCode.BookingAccessDenied)
+        if (itemBooking.status != BookingStatus.CONFIRMED || itemBooking.startAt.isAfter(OffsetDateTime.now())) {
+            // a rental that has not started has nothing to hand back; the booking that is not wanted is
+            // cancelled, and leaving that distinction in place is what keeps RETURNED meaningful
+            throw CustomBadRequestException(code = ErrorCode.BookingNotReturnable)
+        }
+
+        itemBooking.status = BookingStatus.RETURNED
+        itemBooking.returnedBy = if (isOwner) CancelledBy.OWNER else CancelledBy.REQUESTER
+        itemBooking.returnedAt = OffsetDateTime.now()
+        itemBooking.persist()
+
+        val requester = User.find("uuid", itemBooking.userUuid).firstResult()
+        val requesterName = "${requester?.firstName ?: ""} ${requester?.lastName ?: ""}".trim()
+        val recipientUuid = if (isOwner) itemBooking.userUuid else item.userUuid
+        bookingEventSource.fireAsync(
+            BookingEvent(
+                notificationType = NotificationType.BOOKING_RETURNED,
+                recipientUserUuid = recipientUuid,
+                bookingUuid = itemBooking.uuid,
+                itemName = item.name,
+                requesterName = requesterName
+            )
+        )
+
+        return ItemBookingModel(itemBooking).copy(isItemOwner = isOwner)
     }
 
     private fun getItemByUuid(uuid: UUID): Item? {
@@ -358,6 +444,38 @@ class ItemService {
         )
     }
 
+    /**
+     * Approving is the moment a request stops being a wish and becomes a promise, so it has to re-check
+     * the exclusivity that [checkItemAvailability] only enforced when the request was made. Without it
+     * two overlapping requests can both be approved and the owner has promised the same item to two
+     * neighbours for the same days.
+     *
+     * Only CONFIRMED rows count. Still-pending requests must not: nothing prevents several neighbours
+     * from asking for the same slot, and approving one of them is how the owner chooses - if a pending
+     * rival blocked approval, an owner facing two overlapping requests could accept neither.
+     */
+    private fun assertNoConfirmedOverlap(
+        itemUuid: UUID,
+        startAt: OffsetDateTime,
+        endAt: OffsetDateTime,
+        exceptBookingUuid: UUID? = null
+    ) {
+        // One implementation on purpose: the same question is asked when a request arrives and when one is
+        // approved, and if the two ever disagree, a neighbour is told a slot is free that the owner is then
+        // able to sell to somebody else. [exceptBookingUuid] leaves a booking out of its own comparison.
+        val query = if (exceptBookingUuid == null) {
+            "itemUuid = ?1 AND status = 'CONFIRMED' AND startAt < ?3 AND endAt > ?2"
+        } else {
+            "itemUuid = ?1 AND uuid <> ?4 AND status = 'CONFIRMED' AND startAt < ?3 AND endAt > ?2"
+        }
+        val params = if (exceptBookingUuid == null) {
+            arrayOf<Any>(itemUuid, startAt, endAt)
+        } else {
+            arrayOf<Any>(itemUuid, startAt, endAt, exceptBookingUuid)
+        }
+        if (ItemBooking.find(query, *params).count() > 0) throw CustomBadRequestException(code = ErrorCode.ItemReserved)
+    }
+
     private fun checkItemAvailability(item: Item, startAt: OffsetDateTime, endAt: OffsetDateTime) {
         val itemModel = ItemModel(item)
         if (itemModel.availableUntil != null && endAt > itemModel.availableUntil) throw CustomBadRequestException(
@@ -372,12 +490,6 @@ class ItemService {
             code = ErrorCode.DatesNotInInterval
         )
 
-        if (ItemBooking.find(
-                "itemUuid = ?1 AND status = 'CONFIRMED' AND startAt < ?3 AND endAt > ?2",
-                item.uuid, startAt, endAt
-            ).count() > 0
-        ) throw CustomBadRequestException(
-            code = ErrorCode.ItemReserved
-        )
+        assertNoConfirmedOverlap(item.uuid, startAt, endAt)
     }
 }

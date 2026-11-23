@@ -29,6 +29,16 @@ data class PageModel<T>(
         fun <T : Any, S> of(query: PanacheQuery<T>, converter: (T) -> S): PageModel<S> {
             return of(query).map(converter)
         }
+
+        fun <T> empty(): PageModel<T> = PageModel(
+            content = emptyList(),
+            isFirstPage = true,
+            isLastPage = true,
+            pageNumber = 0,
+            pageSize = 0,
+            totalElements = 0,
+            totalPages = 0
+        )
     }
 
     fun <S> map(converter: (T) -> S): PageModel<S> {
