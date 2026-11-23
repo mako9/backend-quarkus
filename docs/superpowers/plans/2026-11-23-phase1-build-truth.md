@@ -1086,6 +1086,20 @@ untracked; `docs/superpowers` was added there too. The scratch ledger stays out 
 contains `*`. Checked before committing: no production secrets in these documents, only the local realm's
 already-committed dev credentials.
 
+### Late addition, not a plan step: the web CI built nothing
+
+`## File Structure` lists `.github/workflows/node.js.yml` as a file this phase touches, but no task ever wires
+it: the job runs `pnpm install` and `pnpm run test-ci`, and nothing else. No `tsc`, no `next build` — which is
+precisely how the CSS break Task 3 fixed could sit in the repo since 2023 with a green badge, and the 14 type
+errors with it. The spec's Phase 1 asks for both steps explicitly, so they are added (`cd6f4ee`), verified by
+simulating a runner: with `.env.local` moved aside and only the step's `env` block, `pnpm run build` exits 0
+with 17 routes; without the four values it dies with "KEYCLOAK_CLIENT_ID is not set".
+
+Related and deliberately not done: no CI job anywhere *boots* the artifact. The classpath gate proves the
+runtime has the Kotlin module, and Task 8 proved the wire format by hand. The automated boot-and-read-one-`is*`-field
+check is Phase 5's, because that is the first job that runs the artifact automatically. This is recorded in the
+spec's Phase 1 status note so it is not inherited as a surprise.
+
 ### Still open, and not this phase's to answer
 
 - **Spec open question 16**: whether Phase 0's retroactive approval backfill (`mario:7`) flips items that

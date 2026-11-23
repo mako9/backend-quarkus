@@ -126,6 +126,13 @@ what was tested.
   and `/q/health` is not a usable container healthcheck while Keycloak is down. Phase 2's decision to
   replace the policy enforcer with `@RolesAllowed` + service-layer checks removes this; until then
   Phase 5's healthcheck design has to live with it.
+  - **Corrected 2026-11-23 by Phase 1, Task 8, running the artifact with Keycloak up**
+    (`docker/compose.dev.yml`, realm imported): `/q/openapi` answers 200 (YAML unless
+    `Accept: application/json`), and `/q/health` answers **404 always** — there is no
+    `quarkus-smallrye-health` dependency in `pom.xml`, so the artifact has no health endpoint at all,
+    Keycloak up or down. That is worse than "not usable while Keycloak is down": Phase 5 has to *add*
+    the dependency before it can write a healthcheck, and the policy-enforcer coupling above still
+    stands as the reason a liveness probe must not be a readiness probe.
 - **Availability window is mistyped in both clients.** The backend sends
   `List<ItemTimeIntervalDto>`; `item.dart:18` declares `String? availability` and `fromJson`
   assigns the array to it (`:59`), which is a `TypeError` on any item that has a weekly window;
@@ -155,6 +162,36 @@ what was tested.
   baseline** — packaged backend jar plus `pnpm build` output plus a release Flutter build —
   smoke-tested against a Keycloak that is not a test fixture. Until that exists, no claim about
   "works end to end" is checkable.
+
+**Resolved 2026-11-23 (Phase 1, Task 6).** One logical change, three commits: backend `d7f5b77`
+(`jackson-module-kotlin` moved from `test` to runtime scope, plus `scripts/check-runtime-classpath.sh`
+gating CI on its presence in `target/quarkus-app/lib/main/`), Flutter `0c8a93e`, web `29c1a96`. The wire
+format is now the Kotlin-module format everywhere, and this is what moved:
+
+| Name | Was | Now | Where |
+|---|---|---|---|
+| page flags | `firstPage` / `lastPage` (client read) | `isFirstPage` / `isLastPage` | `lib/model/data_page.dart:37,38`; artifact already answered these under `@QuarkusTest`, and now answers them for real |
+| community flags | `admin` / `member` (client read) | `isAdmin` / `isMember` | `lib/model/community.dart:51,56` |
+| item active | `active` (client read) | `isActive` | `lib/model/item.dart:56` |
+| item owner | `owner` (client read) | `isOwner` | `lib/model/item.dart:62` |
+| web field name | `active: boolean` | `isActive: boolean` | `app/models/item.ts:11`, read at `ownedItem.tsx:38`, sent at `ownedItem.tsx:242` and `pages/items/create.tsx:100`, plus four test fixtures |
+| backend scope | `<scope>test</scope>` | runtime | `pom.xml`, guarded by the CI gate |
+
+Measured on the packaged artifact rather than inferred (runbook "Verified"): pages answer
+`isFirstPage`/`isLastPage`, `GET /api/user/community/{uuid}` answers `isAdmin`/`isMember`, and a
+`POST /api/user/item/` carrying `"isActive": true` is stored and returned as `isActive: true` — the
+request direction, which no test could demonstrate because tests always had the module on the classpath.
+`Item.toJson()` was already right and is untouched; the two Flutter directions are now asserted to agree
+by a round-trip test that failed before the model changed. No un-prefixed boolean is written or read by
+either client any more (grep over `lib`, `app`, `pages`, `__tests__`; `app/models/community.ts` has no
+owner/admin/member field at all — the web decides ownership by comparing `userUuid`).
+
+Phase 2 therefore starts from one format, not two. Anything it adds must keep the `is*` spelling on the
+wire, and `scripts/check-runtime-classpath.sh` is what stops the module from drifting back to test scope.
+Two facts Phase 2 inherits: `isOwner` is answered `false` on `GET /api/user/item/{uuid}` even to the owner
+because `ItemDetailDto` is built without the requester (`runbook.md`, "What does not work" 2), and the
+write side is asserted only by tests plus that one live POST — the artifact's request handling is not
+covered by a test that could fail.
 
 ---
 
@@ -511,6 +548,29 @@ Then the gates:
   honest repair and it is the client half of the availability defect in finding 0.
 - Flutter CI: uncomment `dart format --set-exit-if-changed`.
 - Stop gitignoring `docs/superpowers/`.
+
+**Executed 2026-11-23** — `2026-11-23-phase1-build-truth.md`, ten tasks, all done. Three measured corrections,
+one gap this phase closed late, and one thing it deliberately left undone:
+
+- The image pin is `quarkus.keycloak.devservices.image-name` in `src/test/resources/application.properties`,
+  **not** in `PolicyEnforcerTest.Profile` as written above: the container is started by Quarkus dev services, so
+  a `-Dkeycloak.docker.image` system property has no effect on it. Cold pull from docker.io proven by digest;
+  the suite is 149 tests, 0 skipped.
+- The no-skip gate is `scripts/ci-check-tests.sh` with a floor of **149**, not 140 — Phase 0 grew the suite by
+  nine tests after this document was written, and a 140 floor would pass while nine tests went missing. CI runs
+  `./mvnw -B clean test`, then the gate.
+- **The web CI did not build.** `.github/workflows/node.js.yml` appears in the plan's file structure but no step
+  wired it, so the job ran `pnpm run test-ci` and nothing else — no `tsc`, no `next build`, which is exactly how
+  the CSS break above survived from 2023 to 2026 with green CI. It now runs `pnpm run typecheck` and
+  `pnpm run build` (`cd6f4ee`); the build step needs placeholder Keycloak values in its `env` because collecting
+  page data imports `pages/api/auth/[...nextauth].ts`, which throws without them.
+- **Still not done, on purpose: nothing in CI boots the artifact.** The wire format is guarded two ways —
+  `scripts/check-runtime-classpath.sh` in CI (a classpath fact) and Task 8's live run against `quarkus-run.jar`
+  (a wire fact, manual, recorded in `docs/runbook.md`). A CI job that starts the jar and reads one `is*` field is
+  the honest version of the bullet above, and it belongs with Phase 5's container job, which is the first place
+  something runs the artifact automatically. Flagged here so Phase 5 does not inherit it as a surprise.
+- `/q/health` answers 404 because there is **no health endpoint at all**, not 500 because Keycloak was down; the
+  bullet above about `/q/health` returning 500 is corrected in finding 0.
 
 ### Phase 2 — Correctness and trust defects
 
