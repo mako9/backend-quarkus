@@ -15,7 +15,10 @@ data class ItemBookingModel(
     val createdAt: OffsetDateTime,
     val status: BookingStatus,
     val cancelledBy: CancelledBy?,
-    val cancelledAt: OffsetDateTime?
+    val cancelledAt: OffsetDateTime?,
+    val returnedBy: CancelledBy?,
+    val returnedAt: OffsetDateTime?,
+    val isItemOwner: Boolean = false
 ) {
     constructor(itemBooking: ItemBooking) : this(
         uuid = itemBooking.uuid,
@@ -26,6 +29,9 @@ data class ItemBookingModel(
         createdAt = itemBooking.createdAt,
         status = itemBooking.status,
         cancelledBy = itemBooking.cancelledBy,
-        cancelledAt = itemBooking.cancelledAt
+        cancelledAt = itemBooking.cancelledAt,
+        returnedBy = itemBooking.returnedBy,
+        returnedAt = itemBooking.returnedAt,
+        isItemOwner = false
     )
 }
