@@ -61,3 +61,14 @@ jobs:
     # Without this step a green check can mean the whole HTTP layer never ran.
     - name: Gate on skipped tests
       run: ./scripts/ci-check-tests.sh
+
+    - name: Package
+      run: ./mvnw -B -DskipTests package
+    - name: Gate on the runtime classpath
+      run: ./scripts/check-runtime-classpath.sh
+    - name: Upload the runnable artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: quarkus-app
+        path: target/quarkus-app
+        retention-days: 7
