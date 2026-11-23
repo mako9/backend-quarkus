@@ -390,7 +390,9 @@ class ItemService {
         val isRequester = itemBooking.userUuid == userUuid
         val isOwner = item.userUuid == userUuid
         if (!isRequester && !isOwner) throw CustomBadRequestException(code = ErrorCode.BookingAccessDenied)
-        if (itemBooking.status != BookingStatus.CONFIRMED) {
+        if (itemBooking.status != BookingStatus.CONFIRMED || itemBooking.startAt.isAfter(OffsetDateTime.now())) {
+            // a rental that has not started has nothing to hand back; the booking that is not wanted is
+            // cancelled, and leaving that distinction in place is what keeps RETURNED meaningful
             throw CustomBadRequestException(code = ErrorCode.BookingNotReturnable)
         }
 
@@ -456,13 +458,22 @@ class ItemService {
         itemUuid: UUID,
         startAt: OffsetDateTime,
         endAt: OffsetDateTime,
-        exceptBookingUuid: UUID
+        exceptBookingUuid: UUID? = null
     ) {
-        if (ItemBooking.find(
-                "itemUuid = ?1 AND uuid <> ?2 AND status = 'CONFIRMED' AND startAt < ?4 AND endAt > ?3",
-                itemUuid, exceptBookingUuid, startAt, endAt
-            ).count() > 0
-        ) throw CustomBadRequestException(code = ErrorCode.ItemReserved)
+        // One implementation on purpose: the same question is asked when a request arrives and when one is
+        // approved, and if the two ever disagree, a neighbour is told a slot is free that the owner is then
+        // able to sell to somebody else. [exceptBookingUuid] leaves a booking out of its own comparison.
+        val query = if (exceptBookingUuid == null) {
+            "itemUuid = ?1 AND status = 'CONFIRMED' AND startAt < ?3 AND endAt > ?2"
+        } else {
+            "itemUuid = ?1 AND uuid <> ?4 AND status = 'CONFIRMED' AND startAt < ?3 AND endAt > ?2"
+        }
+        val params = if (exceptBookingUuid == null) {
+            arrayOf<Any>(itemUuid, startAt, endAt)
+        } else {
+            arrayOf<Any>(itemUuid, startAt, endAt, exceptBookingUuid)
+        }
+        if (ItemBooking.find(query, *params).count() > 0) throw CustomBadRequestException(code = ErrorCode.ItemReserved)
     }
 
     private fun checkItemAvailability(item: Item, startAt: OffsetDateTime, endAt: OffsetDateTime) {
@@ -479,12 +490,6 @@ class ItemService {
             code = ErrorCode.DatesNotInInterval
         )
 
-        if (ItemBooking.find(
-                "itemUuid = ?1 AND status = 'CONFIRMED' AND startAt < ?3 AND endAt > ?2",
-                item.uuid, startAt, endAt
-            ).count() > 0
-        ) throw CustomBadRequestException(
-            code = ErrorCode.ItemReserved
-        )
+        assertNoConfirmedOverlap(item.uuid, startAt, endAt)
     }
 }

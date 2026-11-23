@@ -741,7 +741,7 @@ class ItemServiceTest {
             it.itemUuid = itemOne.uuid
             it.userUuid = requestingUser.uuid
             it.status = BookingStatus.CONFIRMED
-            it.startAt = OffsetDateTime.now().plusDays(1)
+            it.startAt = OffsetDateTime.now().minusDays(1)
             it.endAt = OffsetDateTime.now().plusDays(2)
         }
         val result = itemService.returnBooking(booking.uuid, requestingUser.uuid)
@@ -757,8 +757,8 @@ class ItemServiceTest {
             it.itemUuid = itemOne.uuid
             it.userUuid = requestingUser.uuid
             it.status = BookingStatus.CONFIRMED
-            it.startAt = OffsetDateTime.now().plusDays(1)
-            it.endAt = OffsetDateTime.now().plusDays(2)
+            it.startAt = OffsetDateTime.now().minusDays(2)
+            it.endAt = OffsetDateTime.now().minusDays(1)
         }
         val result = itemService.returnBooking(booking.uuid, user.uuid)
         assertEquals(BookingStatus.RETURNED, result.status)
@@ -781,14 +781,34 @@ class ItemServiceTest {
         assertEquals(listOf(ErrorCode.BookingNotReturnable), exception.codes)
     }
 
+    // "returned" is the statement that the item is back with its owner. Before the rental has started
+    // there is nothing to hand back, and the booking that was wanted is a cancelled one.
     @Test
-    fun `when returning booking as unrelated user, then exception is thrown`() {
+    fun `when returning a booking whose rental has not started, then exception is thrown`() {
         val booking = entityUtil.setupItemBooking {
             it.itemUuid = itemOne.uuid
             it.userUuid = requestingUser.uuid
             it.status = BookingStatus.CONFIRMED
             it.startAt = OffsetDateTime.now().plusDays(1)
             it.endAt = OffsetDateTime.now().plusDays(2)
+        }
+
+        val exception = assertThrows(CustomBadRequestException::class.java) {
+            itemService.returnBooking(booking.uuid, requestingUser.uuid)
+        }
+
+        assertEquals(listOf(ErrorCode.BookingNotReturnable), exception.codes)
+        assertEquals(BookingStatus.CONFIRMED, ItemBooking.find("uuid", booking.uuid).firstResult()!!.status)
+    }
+
+    @Test
+    fun `when returning booking as unrelated user, then exception is thrown`() {
+        val booking = entityUtil.setupItemBooking {
+            it.itemUuid = itemOne.uuid
+            it.userUuid = requestingUser.uuid
+            it.status = BookingStatus.CONFIRMED
+            it.startAt = OffsetDateTime.now().minusDays(2)
+            it.endAt = OffsetDateTime.now().minusDays(1)
         }
         assertThrows(CustomBadRequestException::class.java) {
             itemService.returnBooking(booking.uuid, UUID.randomUUID())
