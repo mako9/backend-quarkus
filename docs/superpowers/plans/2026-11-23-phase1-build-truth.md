@@ -37,7 +37,9 @@ Keycloak 26.5.4.
   `@ts-ignore`, `@ts-expect-error`, `as any`, or by narrowing `tsconfig.json` further
   (`strict: false` and `strictNullChecks: true` stay exactly as they are).
 - Flutter: `flutter analyze` and `flutter test` stay green. `flutter gen-l10n` output in
-  `lib/gen_l10n/` is committed.
+  `lib/gen_l10n/` is committed. **Wrong, corrected while executing (Task 9): it is gitignored and was never
+  tracked, which is why the mobile workflow had to gain a `flutter gen-l10n` step — see "Deviations and
+  findings".**
 - The `is*` naming rule from Phase 0 ("use the dev-name `isItemOwner`") is **reversed by Task 6 of
   this plan**: after Task 6 the production artifact emits the `is*` names, so `is*` is correct
   everywhere. Before Task 6 it is correct only in dev and tests. Do not do Task 6 partially.

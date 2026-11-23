@@ -571,6 +571,10 @@ one gap this phase closed late, and one thing it deliberately left undone:
   something runs the artifact automatically. Flagged here so Phase 5 does not inherit it as a surprise.
 - `/q/health` answers 404 because there is **no health endpoint at all**, not 500 because Keycloak was down; the
   bullet above about `/q/health` returning 500 is corrected in finding 0.
+- **For Phase 3 and Phase 4b:** `lib/gen_l10n/` is **not** committed — it is generated from `lib/l10n/*.arb`,
+  gitignored since 904ff99, and was never tracked. Both plans list `lib/gen_l10n/*` under "Modify", which will
+  add nothing. Edit the ARB files and run `flutter gen-l10n`; CI does the same since `baddada`, which is also why
+  that step exists.
 
 ### Phase 2 — Correctness and trust defects
 
