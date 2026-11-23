@@ -8,7 +8,10 @@ services:
       POSTGRES_USER: quarkus
       POSTGRES_PASSWORD: quarkus
       POSTGRES_DB: quarkus
-    ports: ["5433:5432"]
+    # 127.0.0.1 on purpose: these are dev credentials from config/quarkus-realm.json and this stack is not a
+    # network service. Published on all interfaces, postgres (quarkus/quarkus) and the Keycloak admin console
+    # (admin/admin) are reachable from anything on the LAN.
+    ports: ["127.0.0.1:5433:5432"]
     volumes: ["pgdev:/var/lib/postgresql/data"]
   keycloak:
     image: docker.io/keycloak/keycloak:26.5.4
@@ -16,6 +19,6 @@ services:
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
-    ports: ["8180:8080"]
+    ports: ["127.0.0.1:8180:8080"]
     volumes: ["../config:/opt/keycloak/data/import:ro"]
 volumes: { pgdev: {} }
