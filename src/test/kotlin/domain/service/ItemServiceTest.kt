@@ -52,6 +52,7 @@ class ItemServiceTest {
 
     private lateinit var user: User
     private lateinit var requestingUser: User
+    private lateinit var otherUser: User
     private lateinit var community: Community
     private lateinit var itemOne: Item
     private lateinit var itemTwo: Item
@@ -64,6 +65,7 @@ class ItemServiceTest {
     fun beforeEach() {
         user = entityUtil.setupUser()
         requestingUser = entityUtil.setupUser()
+        otherUser = entityUtil.setupUser()
         community = entityUtil.setupCommunity()
         itemOne = entityUtil.setupItem {
             it.name = "aaa"; it.communityUuid = community.uuid; it.userUuid = user.uuid; it.city =
@@ -515,6 +517,77 @@ class ItemServiceTest {
 
         val storedBooking = ItemBooking.find("uuid", booking.uuid).firstResult()
         assertEquals(BookingStatus.CONFIRMED, storedBooking?.status)
+    }
+
+    @Test
+    fun `when approving a booking whose slot was already confirmed, then ITEM_RESERVED is thrown`() {
+        val item = entityUtil.setupItem { it.communityUuid = community.uuid; it.userUuid = user.uuid }
+        val first = entityUtil.setupItemBooking {
+            it.itemUuid = item.uuid; it.userUuid = requestingUser.uuid; it.status = BookingStatus.PENDING
+            it.startAt = OffsetDateTime.now().plusDays(1); it.endAt = OffsetDateTime.now().plusDays(2)
+        }
+        val second = entityUtil.setupItemBooking {
+            it.itemUuid = item.uuid; it.userUuid = otherUser.uuid; it.status = BookingStatus.PENDING
+            it.startAt = OffsetDateTime.now().plusDays(1); it.endAt = OffsetDateTime.now().plusDays(2)
+        }
+
+        itemService.approveBooking(first.uuid, user.uuid)
+
+        val exception = assertThrows(CustomBadRequestException::class.java) {
+            itemService.approveBooking(second.uuid, user.uuid)
+        }
+        assertEquals(listOf(ErrorCode.ItemReserved), exception.codes)
+        // the refused request stays pending for the other requester to be declined, it is not silently lost
+        assertEquals(BookingStatus.PENDING, ItemBooking.find("uuid", second.uuid).firstResult()?.status)
+    }
+
+    @Test
+    fun `when approving one of two overlapping pending requests, then the other is refused`() {
+        // nothing stops several neighbours asking for the same days - that arbitrating is what approval
+        // is for. So the first approval must succeed, and only once it has, the rival becomes unservable.
+        val item = entityUtil.setupItem { it.communityUuid = community.uuid; it.userUuid = user.uuid }
+        val first = entityUtil.setupItemBooking {
+            it.itemUuid = item.uuid; it.userUuid = requestingUser.uuid; it.status = BookingStatus.PENDING
+            it.startAt = OffsetDateTime.now().plusDays(1); it.endAt = OffsetDateTime.now().plusDays(2)
+        }
+        val rival = entityUtil.setupItemBooking {
+            it.itemUuid = item.uuid; it.userUuid = otherUser.uuid; it.status = BookingStatus.PENDING
+            it.startAt = OffsetDateTime.now().plusDays(1); it.endAt = OffsetDateTime.now().plusDays(2)
+        }
+
+        assertEquals(BookingStatus.CONFIRMED, itemService.approveBooking(first.uuid, user.uuid).status)
+
+        val exception = assertThrows(CustomBadRequestException::class.java) {
+            itemService.approveBooking(rival.uuid, user.uuid)
+        }
+        assertEquals(listOf(ErrorCode.ItemReserved), exception.codes)
+        assertEquals(BookingStatus.PENDING, ItemBooking.find("uuid", rival.uuid).firstResult()?.status)
+    }
+
+    @Test
+    fun `when approving a booking with no overlap, then it becomes CONFIRMED`() {
+        val item = entityUtil.setupItem { it.communityUuid = community.uuid; it.userUuid = user.uuid }
+        entityUtil.setupItemBooking {
+            it.itemUuid = item.uuid; it.userUuid = requestingUser.uuid; it.status = BookingStatus.CONFIRMED
+            it.startAt = OffsetDateTime.now().plusDays(1); it.endAt = OffsetDateTime.now().plusDays(2)
+        }
+        val booking = entityUtil.setupItemBooking {
+            it.itemUuid = item.uuid; it.userUuid = otherUser.uuid; it.status = BookingStatus.PENDING
+            it.startAt = OffsetDateTime.now().plusDays(3); it.endAt = OffsetDateTime.now().plusDays(4)
+        }
+
+        assertEquals(BookingStatus.CONFIRMED, itemService.approveBooking(booking.uuid, user.uuid).status)
+    }
+
+    @Test
+    fun `when approving a booking, then its own pending row is not counted as a conflict`() {
+        val item = entityUtil.setupItem { it.communityUuid = community.uuid; it.userUuid = user.uuid }
+        val booking = entityUtil.setupItemBooking {
+            it.itemUuid = item.uuid; it.userUuid = requestingUser.uuid; it.status = BookingStatus.PENDING
+            it.startAt = OffsetDateTime.now().plusDays(1); it.endAt = OffsetDateTime.now().plusDays(2)
+        }
+
+        assertEquals(BookingStatus.CONFIRMED, itemService.approveBooking(booking.uuid, user.uuid).status)
     }
 
     @Test

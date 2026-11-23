@@ -268,6 +268,7 @@ class ItemService {
             ?: throw EntityNotFoundException("No item for UUID: ${itemBooking.itemUuid}")
         if (item.userUuid != userUuid) throw CustomForbiddenException("User is not the owner of item: ${item.uuid}")
         if (itemBooking.status != BookingStatus.PENDING) throw CustomBadRequestException(code = ErrorCode.BookingNotPending)
+        assertNoConfirmedOverlap(itemBooking.itemUuid, itemBooking.startAt, itemBooking.endAt, itemBooking.uuid)
 
         itemBooking.status = BookingStatus.CONFIRMED
         itemBooking.persist()
@@ -439,6 +440,29 @@ class ItemService {
         if (endAt <= startAt) throw CustomBadRequestException(
             code = ErrorCode.InvalidInputParam
         )
+    }
+
+    /**
+     * Approving is the moment a request stops being a wish and becomes a promise, so it has to re-check
+     * the exclusivity that [checkItemAvailability] only enforced when the request was made. Without it
+     * two overlapping requests can both be approved and the owner has promised the same item to two
+     * neighbours for the same days.
+     *
+     * Only CONFIRMED rows count. Still-pending requests must not: nothing prevents several neighbours
+     * from asking for the same slot, and approving one of them is how the owner chooses - if a pending
+     * rival blocked approval, an owner facing two overlapping requests could accept neither.
+     */
+    private fun assertNoConfirmedOverlap(
+        itemUuid: UUID,
+        startAt: OffsetDateTime,
+        endAt: OffsetDateTime,
+        exceptBookingUuid: UUID
+    ) {
+        if (ItemBooking.find(
+                "itemUuid = ?1 AND uuid <> ?2 AND status = 'CONFIRMED' AND startAt < ?4 AND endAt > ?3",
+                itemUuid, exceptBookingUuid, startAt, endAt
+            ).count() > 0
+        ) throw CustomBadRequestException(code = ErrorCode.ItemReserved)
     }
 
     private fun checkItemAvailability(item: Item, startAt: OffsetDateTime, endAt: OffsetDateTime) {
