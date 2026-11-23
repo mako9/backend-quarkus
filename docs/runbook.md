@@ -101,6 +101,14 @@ rejects it. The compose stack publishes both ports on `127.0.0.1` only, so a phy
 reach it either way; use the emulator or a USB `adb reverse`. It does need a device: see *What does not work*.
 (`assets/config/config.yaml` is gitignored by line 56 but tracked anyway, so a fresh checkout does have one.)
 
+**Use the toolchain CI uses: Flutter 3.41.9 / Dart 3.11.5**, which `.github/workflows/dart.yml` now pins. Two
+reasons this matters out loud: `/usr/local/bin/dart` on this machine is a standalone Dart 2.17.3 that formats
+differently, so `$HOME/development/flutter/bin` has to come first in `PATH`; and the analyzer, not the
+formatter, is what drifts — the first CI run on this branch asked for `channel: stable`, got Flutter 3.50.1, and
+failed with 51 `deprecated_member_use` infos because `package:flutter/material.dart` is deprecated since v3.47.
+The same tree analyzes clean on 3.41.9. Upgrading Flutter therefore means doing the `material_ui` migration
+first; it is not a side effect of an unrelated PR.
+
 ## What does not work
 
 1. **`GET /q/health` answers 404.** There is no `quarkus-smallrye-health` dependency, so the artifact has
