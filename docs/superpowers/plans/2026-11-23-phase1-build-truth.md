@@ -1115,7 +1115,9 @@ reviewer's own disproved; one blocking sub-item declined for plan 2c with its ev
   unified. Corrected, with the measurements that show what is still split. The web type this phase grew
   (`{startAt, endAt}`) was wrong against `ItemTimeIntervalDto` — `3540200` gives it the four real fields, and
   the artifact was probed to get them right: `[{"startDayOfWeek":1,"endDayOfWeek":3,"startTimeAt":"09:00Z",
-  "endTimeAt":"17:00Z"}]`, and an interval with unknown keys is a 400, not ignored, so an exact type matters
+  "endTimeAt":"17:00Z"}]`, and an interval with unknown keys is a 400, not ignored **[corrected 2026-11-24: it
+  is ignored, and the key comes back dropped — the 400 my probe saw came from a body that omitted the four
+  non-null fields, not from the unknown ones; see plan 2c and `runbook.md`]**, so an exact type matters
   because `ownedItem.tsx` posts the array straight back.
 - *An unconfigured packaged run migrates the developer's own database.* The runbook warned about it; the
   reviewer pointed out that a safe default beats a warning, and that is right — this phase is the one that made
