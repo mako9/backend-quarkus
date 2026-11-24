@@ -128,25 +128,34 @@ first; it is not a side effect of an unrelated PR.
    "Sending email …". Phase 4.
 6. **Mobile was not run for this baseline.** No Android SDK on this machine (`ANDROID_HOME` unset, no
    `sdk.dir` in `android/local.properties`, no `~/Library/Android`), so no APK build and no emulator; iOS
-   has Xcode but no signing team. `flutter test` (149) and `flutter analyze` are green, and the wire
+   has Xcode but no signing team. `flutter test` (156 since plan 2c, 149 before) and `flutter analyze` are green, and the wire
    format the app reads is the one verified below over HTTP. Recorded as *not verified*, per the plan.
 7. **The scripted login used for this baseline failed.** Keycloak 26 answered the form-encoded credential
    POST with 400 and the login page again. That is a limitation of the scripted client, not of the app:
    the same realm and client authenticated from a real browser on 2026-11-23 (Phase 0's walk). A human
    pass is still owed: load `/`, sign in, list items, open an item, create an item, book one.
-8. **Mobile cannot open an item at all.** `Item.availability` is declared `String?` (`item.dart:19`) and
-   `fromJson` assigns the JSON array to it (`:63`), while every item response carries `availability` as an
-   array — `[]` when the item has no window (measured on the artifact). A throwaway test that parsed a real
-   response body failed with `type 'List<dynamic>' is not a subtype of type 'String?'` at `item.dart:63`.
-   Pre-existing, not from Phase 1: the pre-Phase-1 artifact sends an array here too. Plan 2c's first item.
-9. **Mobile cannot create or update an item either.** Nothing in the app ever sets `Item.availability`, so
-   `toJson()` sends `"availability": null`, and `ItemRequestDto.availability` is a non-null `List` with a
-   default. Measured on the current artifact: `POST /api/user/item/` with `"availability": null` → **HTTP 400**;
-   with `[]` → 200; with the key omitted → 200; with an interval whose keys the DTO does not know → 400. The
-   pre-Phase-1 artifact returns 400 for the same null request too, so Phase 1's Jackson change did not cause
-   this (it actually improved one case: the old artifact returned 400 when the key was *omitted*, the current
-   one accepts that). The web is unaffected — create sends `[]` and the update echoes back what the server
-   sent. Plan 2c.
+8. **Mobile could not open an item at all — fixed 2026-11-24 (plan 2c).** `Item.availability` was declared
+   `String?` and `fromJson` assigned the JSON array to it, while every item response carries `availability` as
+   an array — `[]` when the item has no window. The parse died with
+   `type 'List<Map<String, Object>>' is not a subtype of type 'String?'`. Pre-existing, not from Phase 1: the
+   pre-Phase-1 artifact sends an array here too. It is now `List<ItemTimeInterval>`, carrying the four wire
+   fields verbatim (see *Verified* for the round trip on the artifact). Still not done on mobile: there is no
+   availability editor, so a phone can read and preserve a window but cannot set one. Plan 2d.
+9. **Mobile could not create or update an item either — fixed 2026-11-24 (plan 2c).** Nothing in the app ever
+   set `Item.availability`, so `toJson()` sent `"availability": null`, and `ItemRequestDto.availability` is a
+   non-null `List`. Measured again on the current artifact on 2026-11-24: null → **400**; `[]` → 200, and the
+   `GET` answers `[]`; a four-field window → 200 and stored; **the key omitted → 200 and the windows are
+   gone**. That last row is why the edit screen now carries the windows across by hand, and why the app always
+   sends a list. The pre-Phase-1 artifact 400s the null request too — and 400s the omission as well, so Phase 1
+   inherited this and improved one case. The web was never affected: create sends `[]` and the update echoes
+   back what the server sent.
+10. **The booking × availability interaction is verified in code, not over HTTP.** `bookItem` refuses the item's
+    own owner (`ItemService.kt:219`, "Can not book owned item") *before* it looks at the window (`:221`), and
+    the seeded realm users expose no usable password — `config/quarkus-realm.json` carries no credential values,
+    only the one the token recipe above happens to work with. So "an item with no window is bookable on any
+    date" rests on `checkItemAvailability`'s `availability.isNotEmpty() &&` guard (`ItemService.kt:485`) and not
+    on a booking that answered 200 for a Friday. A second seeded user with a known password belongs with Phase
+    6's demo seed; until then any two-person flow needs a user created by hand in the admin console.
 
 ## Verified
 
@@ -192,3 +201,21 @@ Re-verified on 2026-11-23 after the review round, all on the packaged artifacts:
   exits 0 and puts the address in 9 client chunks; `pnpm dev` on `.env.development` alone serves
   `/en/about` 200.
 - Backend suite after the datasource change: 149 tests, 0 skipped.
+
+### 2026-11-24, plan 2c: the availability shape, against the shipping artifact
+
+Packaged jar of this tree (backend source is unchanged since Phase 1 verified it — the commits on top are docs),
+compose stack, `Profile prod activated` with no datasource environment, token as alice. The bodies are exactly
+what the Flutter model now serializes; the item lives in a fresh community.
+
+| Request | Answer |
+|---|---|
+| `POST /api/user/item/` with `"availability": []` | 200, and the `GET` answers `"availability": []` |
+| `PATCH` with `[{"startDayOfWeek":1,"endDayOfWeek":3,"startTimeAt":"09:00Z","endTimeAt":"17:00Z"}]` | 200, and the `GET` answers the same four keys with the day numbers unchanged |
+| `PATCH` with the artifact's own answer echoed back | 200, unchanged — this is what makes a verbatim pass-through safe rather than lucky |
+| `PATCH` with the `availability` key **omitted** | 200 — and the window is **gone**, the `GET` answers `[]` |
+| `PATCH` with `"availability": null` | **400** — what the mobile app sent before the fix |
+| `POST /api/user/item/{uuid}/booking` by the item's owner | 400 `Can not book owned item`, before any date or interval check |
+
+Mobile suite with the new model: `flutter test` **156 passed** (149 before), `flutter analyze` clean,
+`dart format --set-exit-if-changed` clean. Still no runtime verification — see *What does not work* 6.
