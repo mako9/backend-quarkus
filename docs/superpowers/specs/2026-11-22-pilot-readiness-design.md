@@ -200,8 +200,12 @@ read-authorization territory, not a serialization question).
 test, stack at `item.dart:63`). On the write side the mobile app always sends `"availability": null`, which the
 artifact answers with **HTTP 400** — as does the pre-Phase-1 artifact, so this is inherited, not caused here;
 `[]` or omitting the key answers 200. The web's `ItemTimeInterval` was described as `{startAt, endAt}` by Phase
-1 Task 4 and now carries the four real fields (`3540200`); an interval with unknown keys is a 400, not ignored,
-which is why the type has to be exact. Full measurements: `runbook.md`, "What does not work" 8 and 9.
+1 Task 4 and now carries the four real fields (`3540200`), which has to be exact because the four names are the
+whole contract. **Correction from 2026-11-24, measured:** this paragraph claimed an interval with unknown keys
+is a 400 rather than ignored. It is not — Quarkus leaves unknown JSON properties alone, so an interval with a
+fifth key is accepted and the key comes back dropped; the 400 recorded on 2026-11-23 came from a body that
+*omitted* the four non-null fields. Same claim, same correction, in `runbook.md` and in both clients' model
+comments. Full measurements: `runbook.md`, "What does not work" 8–12 and the 2026-11-24 second pass.
 
 Phase 2 therefore starts from one format **for the `is*` booleans** — anything it adds must keep the `is*`
 spelling on the wire, and `scripts/check-runtime-classpath.sh` is what stops the module from drifting back to
@@ -655,6 +659,10 @@ Task 6**, where it belongs with the artifact that has to emit it.
   | Member list | community admin only |
   | Conversation (Phase 4b) | requester and item owner only |
 
+  **The table's first draft covered reads only; `POST /user/item/{uuid}/booking` needs the same rule.** Measured
+  2026-11-24: a user who belongs to no community booked another user's item and got 201. Reserving someone's
+  possession is not a read.
+
   Community detail therefore stops returning owner street and house number to outsiders —
   those live on the item, which is already members-only, and the community's own address is
   deliberately public because it is what tells you whether a group is on your street. This is
@@ -664,6 +672,12 @@ Task 6**, where it belongs with the artifact that has to emit it.
   all (its current redirect to `/my-area` was a half-step toward exactly that).
 
 **Backend logic**
+- **A lending window's UTC offset is silently discarded** (found 2026-11-24, measured on the artifact). Sent
+  `startTimeAt: "08:30+01:00"`, the item answers `"08:30Z"`: `TimeIntervalModel` keeps only
+  `startTimeAtInMinute` and `DateTimeUtils` re-emits in UTC, so the wall-clock meaning moves by the offset on
+  every read and two neighbours in different zones cannot share a window. Either store minutes-with-offset, or
+  define the window as "in the item's timezone" and say which. Both clients are affected, and no client can fix
+  it — the value is gone before the response.
 - **Approval's overlap check is not atomic** (found in the Phase 0 review round, after that task shipped).
   `approveBooking` reads "is any CONFIRMED booking in this range" and then writes, with no lock and no
   database constraint between the two, so two approvals arriving together can both read *free* and both
@@ -710,7 +724,8 @@ Task 6**, where it belongs with the artifact that has to emit it.
   the artifact: `[{"startDayOfWeek":1,"endDayOfWeek":3,"startTimeAt":"09:00Z","endTimeAt":"17:00Z"}]`, days
   being `java.time.DayOfWeek` (1 = Monday). The Next.js half is done: `availability: Array<ItemTimeInterval>`
   from Phase 1 Task 4, with `ItemTimeInterval` corrected to the four DTO fields in `3540200` (unknown interval
-  keys are a 400, not ignored, so the type must be exact). What is left for 2c is the Flutter model plus the
+  keys are load-bearing, though unknown *extra* keys are ignored and dropped, not rejected — corrected
+  2026-11-24). What is left for 2c is the Flutter model plus the
   fixtures that currently hand it a `String` (`test/service/item_service_test.dart`).
   **Planned in `docs/superpowers/plans/2026-11-24-phase2c-mobile-item-availability.md`, which decides the two
   open questions with measurements:** the app sends no window as `[]`, never by omitting the key, because

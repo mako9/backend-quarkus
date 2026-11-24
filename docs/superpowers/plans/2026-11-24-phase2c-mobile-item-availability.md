@@ -125,7 +125,9 @@ Expected: FAIL — currently a compile error on the unknown `ItemTimeInterval` (
 
 - [ ] **Step 5: Create `lib/model/item_time_interval.dart`**
 
-`fromJson` requires all four keys and throws `ArgumentError` naming what is missing — the backend answers HTTP 400 for an interval with unknown keys, so an interval the client cannot name is a contract break, not a thing to drop quietly. `toJson` emits exactly the four keys. Equality is by all four fields.
+`fromJson` requires all four keys and throws `ArgumentError` naming what is missing: all four are non-null on the server, so an interval without them is not an interval and guessing would rewrite the owner's window. `toJson` emits exactly the four keys. Equality is by all four fields.
+
+*(Corrected while executing, 2026-11-24: this step justified the strictness by saying the backend answers an interval with unknown keys with HTTP 400. Measured the next day — it does not; unknown keys are ignored and dropped, and the 400 from Phase 1's probe came from a body missing the four non-null fields. The strictness on **missing** keys stands, which is what the test actually exercises; the test name said "unknown keys" and has been renamed, a characterization test now pins the drop-on-write behaviour, and the class comment states the cost: a field added server-side and not carried here is erased by the next mobile save.)*
 
 - [ ] **Step 6: Change `Item` to carry it**
 

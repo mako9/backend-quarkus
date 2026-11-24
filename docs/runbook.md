@@ -120,8 +120,10 @@ first; it is not a side effect of an unrelated PR.
    gates the booking form and the booked-dates list on it, so your own item looks like a stranger's. The
    booking endpoints get this right (`ItemBookingModel.copy(isItemOwner = …)`). Belongs with Phase 2's
    read authorization, which gives those endpoints the requester's identity anyway.
-3. **Item and community reads are not gated by community membership** (spec says they are) — unchanged in
-   this phase, tracked as Phase 2's read-authorization table.
+3. **Item and community reads are not gated by community membership** (the spec says they are) — and neither
+   is the write that matters most. Measured 2026-11-24: `jdoe`, who belongs to no community, booked an item
+   owned by `alice` and got **HTTP 201**. Phase 2's authorization table is titled "who may read"; it needs to
+   cover booking too, because a stranger reserving your ladder is worse than a stranger seeing it.
 4. **A web session dies when the access token expires** (5 minutes in this realm): the header still looks
    signed in while every page renders empty. next-auth is not refreshing. Phase 2c.
 5. **Email is not sent.** `quarkus.mailer.mock=true` is not profile-scoped, so `%prod` only logs
@@ -136,12 +138,16 @@ first; it is not a side effect of an unrelated PR.
    pass is still owed: load `/`, sign in, list items, open an item, create an item, book one.
 8. **Mobile could not open an item at all — fixed 2026-11-24 (plan 2c).** `Item.availability` was declared
    `String?` and `fromJson` assigned the JSON array to it, while every item response carries `availability` as
-   an array — `[]` when the item has no window. The parse died with
-   `type 'List<Map<String, Object>>' is not a subtype of type 'String?'`. Pre-existing, not from Phase 1: the
+   an array — `[]` when the item has no window. The parse died on the assignment; reproduced in a Dart test
+   with a literal body it reads `type 'List<Map<String, Object>>' is not a subtype of type 'String?'`, and on a
+   body that came through `jsonDecode` the left-hand type is `List<dynamic>`, which is what this entry said
+   before. Same failure either way — the wording here names the literal, not the wire. Pre-existing, not from
+   Phase 1: the
    pre-Phase-1 artifact sends an array here too. It is now `List<ItemTimeInterval>`, carrying the four wire
    fields verbatim (see *Verified* for the round trip on the artifact). Still not done on mobile: there is no
    availability editor, so a phone can read and preserve a window but cannot set one. Plan 2d.
-9. **Mobile could not create or update an item either — fixed 2026-11-24 (plan 2c).** Nothing in the app ever
+9. **Mobile could not create or update an item either — fixed 2026-11-24 (plan 2c) for `availability` only;
+   see 11 before trusting a mobile save.** Nothing in the app ever
    set `Item.availability`, so `toJson()` sent `"availability": null`, and `ItemRequestDto.availability` is a
    non-null `List`. Measured again on the current artifact on 2026-11-24: null → **400**; `[]` → 200, and the
    `GET` answers `[]`; a four-field window → 200 and stored; **the key omitted → 200 and the windows are
@@ -149,13 +155,33 @@ first; it is not a side effect of an unrelated PR.
    sends a list. The pre-Phase-1 artifact 400s the null request too — and 400s the omission as well, so Phase 1
    inherited this and improved one case. The web was never affected: create sends `[]` and the update echoes
    back what the server sent.
-10. **The booking × availability interaction is verified in code, not over HTTP.** `bookItem` refuses the item's
-    own owner (`ItemService.kt:219`, "Can not book owned item") *before* it looks at the window (`:221`), and
-    the seeded realm users expose no usable password — `config/quarkus-realm.json` carries no credential values,
-    only the one the token recipe above happens to work with. So "an item with no window is bookable on any
-    date" rests on `checkItemAvailability`'s `availability.isNotEmpty() &&` guard (`ItemService.kt:485`) and not
-    on a booking that answered 200 for a Friday. A second seeded user with a known password belongs with Phase
-    6's demo seed; until then any two-person flow needs a user created by hand in the admin console.
+10. **An item with no lending window can be booked for any date — by design, and now measured.** The first
+    version of this entry said the behaviour could not be checked because "the seeded realm users expose no
+    usable password". That was wrong, and contradicted line 23 of this same file: the realm's users all have a
+    password credential and **passwords equal the username**, so `jdoe/jdoe` gets a token in one curl. With a
+    second caller, on the packaged artifact: an item with a Mon–Wed window answers a Friday booking with
+    **400 `DATES_NOT_IN_INTERVAL`** and a Tuesday booking with **201**; after `availability` is set to `[]` the
+    *same* Friday answers **201**. So `checkItemAvailability`'s `availability.isNotEmpty() &&` guard
+    (`ItemService.kt:485`) does mean *unrestricted*, and a phone-created item — mobile has no availability
+    editor yet — is bookable for any date until its owner sets a window on the web. That is the product
+    consequence of plan 2c, stated in the spec too, and it is the reason plan 2d's editor is worth doing.
+11. **Saving an item on mobile still loses two things the form does not carry.** Fixing `availability` made
+    mobile edit succeed for the first time, which exposed two older bugs of the same shape rather than causing
+    them: the screen rebuilds the request from its own fields, and `PATCH` replaces the row. So
+    (a) `availableUntil` is sent from `_selectedDate`, which only the date picker sets, while the *label* falls
+    back to the stored value (`item_edit_screen.dart:274` vs `:310`) — the owner sees their date, edits the
+    name, saves, and the date is gone; and (b) `_selectedCommunity` starts at 0 and is never seeded from
+    `item.communityUuid` (`:64`, `:309`), so an owner in two or more communities silently moves the item into
+    their first one, where their neighbours can no longer see it. Both are scoped to plan 2d (spec's Flutter
+    list). They are listed here, not fixed there, because the fix needs the community list's index resolved
+    against a loaded page, which is a change of its own size — but nobody should read item 9 as "mobile edit is
+    safe".
+12. **A lending window's offset is thrown away by the backend.** Sent
+    `{"startTimeAt":"08:30+01:00","endTimeAt":"12:00+01:00"}`, the artifact answers
+    `{"startTimeAt":"08:30Z","endTimeAt":"12:00Z"}` — `TimeIntervalModel` keeps `startTimeAtInMinute` and
+    `DateTimeUtils` re-emits in UTC, so "half past eight in Berlin" is stored as "half past eight UTC" and
+    shifts by the offset on every read. Pre-existing and server-side; the client passes the text through
+    unchanged, which cannot rescue a value the server has already normalised. Belongs in plan 2b's backend list.
 
 ## Verified
 
@@ -219,3 +245,22 @@ what the Flutter model now serializes; the item lives in a fresh community.
 
 Mobile suite with the new model: `flutter test` **156 passed** (149 before), `flutter analyze` clean,
 `dart format --set-exit-if-changed` clean. Still no runtime verification — see *What does not work* 6.
+
+### 2026-11-24, second pass: two users, unknown keys, and an offset
+
+Same jar, same stack. This one exists because a reviewer pointed out that the first pass had excused itself
+out of the booking measurement on a false premise.
+
+| Request (as `jdoe`, in no community, item owned by `alice`) | Answer |
+|---|---|
+| `POST …/booking` Friday, item window Mon–Wed | **400** `DATES_NOT_IN_INTERVAL` |
+| `POST …/booking` Tuesday, item window Mon–Wed | **201** |
+| `PATCH availability: []`, then the same Friday booking | **201** — no window means no interval restriction |
+| `PATCH` an interval carrying a 5th key `"tz":"Europe/Berlin"` | **200**, and the `GET` comes back **without** `tz` |
+| `PATCH` a window with `08:30+01:00` / `12:00+01:00` | `GET` answers `08:30Z` / `12:00Z` |
+
+Two of those rows corrected things written down earlier. Unknown keys are **not** rejected with 400 — Quarkus
+ignores unknown properties, and the 400 recorded on 2026-11-23 came from a body that omitted the four non-null
+fields rather than from the unknown ones; that claim had reached the spec, the Flutter model's comment, and
+`frontend-nextjs/app/models/item.ts`, and all three now say what was measured instead. And the offset row is a
+backend defect nobody had noticed.
