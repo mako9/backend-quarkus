@@ -44,7 +44,7 @@
   - `Item.toJson` writes `'availability': availability.map((e) => e.toJson()).toList()` — always a JSON array.
   - `ItemEditScreen` (Task 2) relies on `Item(…, availability: …)` accepting a `List<ItemTimeInterval>`.
 
-- [ ] **Step 1: Write the failing parse test**
+- [x] **Step 1: Write the failing parse test**
 
 Add to `frontend_flutter/test/model/item_test.dart`. The literal body is the packaged artifact's answer, measured 2026-11-23 and recorded in `backend-quarkus/docs/runbook.md` ("What does not work" 8); do not "tidy" it.
 
@@ -64,12 +64,12 @@ test('when parsing the availability the artifact sends, then the four fields sur
 });
 ```
 
-- [ ] **Step 2: Run it and watch it fail the way the app fails in the field**
+- [x] **Step 2: Run it and watch it fail the way the app fails in the field**
 
 Run: `flutter test test/model/item_test.dart` (with the pinned toolchain on `PATH`)
 Expected: FAIL. Today it is `type 'List<dynamic>' is not a subtype of type 'String?'` — after the field's type changes and before the class exists, it is a compile error naming `ItemTimeInterval`. Either way it must fail *before* `lib/` is touched, and if it fails with something else, stop and work out why.
 
-- [ ] **Step 3: Write the remaining five failing tests**
+- [x] **Step 3: Write the remaining five failing tests**
 
 Still in `test/model/item_test.dart`. One assertion each; the `import` line gains `item_time_interval.dart`.
 
@@ -118,39 +118,39 @@ test('an interval serializes exactly the four keys the DTO declares', () {
 });
 ```
 
-- [ ] **Step 4: Run all six and watch them fail**
+- [x] **Step 4: Run all six and watch them fail**
 
 Run: `flutter test test/model/item_test.dart`
 Expected: FAIL — currently a compile error on the unknown `ItemTimeInterval` (and, once it exists, `type 'List<dynamic>' is not a subtype of type 'String?'` from `item.dart:63` for the parse tests).
 
-- [ ] **Step 5: Create `lib/model/item_time_interval.dart`**
+- [x] **Step 5: Create `lib/model/item_time_interval.dart`**
 
 `fromJson` requires all four keys and throws `ArgumentError` naming what is missing: all four are non-null on the server, so an interval without them is not an interval and guessing would rewrite the owner's window. `toJson` emits exactly the four keys. Equality is by all four fields.
 
 *(Corrected while executing, 2026-11-24: this step justified the strictness by saying the backend answers an interval with unknown keys with HTTP 400. Measured the next day — it does not; unknown keys are ignored and dropped, and the 400 from Phase 1's probe came from a body missing the four non-null fields. The strictness on **missing** keys stands, which is what the test actually exercises; the test name said "unknown keys" and has been renamed, a characterization test now pins the drop-on-write behaviour, and the class comment states the cost: a field added server-side and not carried here is erased by the next mobile save.)*
 
-- [ ] **Step 6: Change `Item` to carry it**
+- [x] **Step 6: Change `Item` to carry it**
 
 `lib/model/item.dart`: the field becomes `final List<ItemTimeInterval> availability;`, the constructor gains `this.availability = const []`, `fromJson` becomes `availability: (json['availability'] as List?)?.map((e) => ItemTimeInterval.fromJson(e as Map<String, dynamic>)).toList() ?? const []`, and `toJson` becomes `'availability': availability.map((e) => e.toJson()).toList()`. Add the import. Add a doc comment on the field saying that `[]` means unrestricted (`ItemService.kt:485`) and that the times are passed through untouched, because a future reader will otherwise be tempted to parse them.
 
-- [ ] **Step 7: Run the model tests to green**
+- [x] **Step 7: Run the model tests to green**
 
 Run: `flutter test test/model/item_test.dart`
 Expected: PASS, 9 tests — the 6 above plus the 3 `requiresApproval` tests already in the file, which must still pass untouched.
 
-- [ ] **Step 8: Fix the two fixtures that hand the model a `String`**
+- [x] **Step 8: Fix the two fixtures that hand the model a `String`**
 
 In `frontend_flutter/test/service/item_service_test.dart`:
 - `:31` `availability: null,` → a one-window list, so the shared fixture exercises the real shape rather than the degenerate one.
 - `:45` `'availability': item.availability,` → `'availability': item.availability.map((e) => e.toJson()).toList(),` — a `List<ItemTimeInterval>` is not JSON.
 - `:61` `'availability': 'otherFirst',` → `'availability': [],`. That fixture is a page entry for an item with no window, and a bare `String` was never a possible server answer; leaving it would keep alive the assumption this plan exists to kill.
 
-- [ ] **Step 9: Run the whole suite**
+- [x] **Step 9: Run the whole suite**
 
 Run: `flutter test`
 Expected: PASS, 149 + 6 new = 155 tests. Any failure elsewhere is a call site that treated `availability` as a `String`; `grep -rn "availability" lib test` should then show only `lib/model/item.dart`, `lib/model/item_time_interval.dart` and the two test files.
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 git add lib/model/item_time_interval.dart lib/model/item.dart test/model/item_test.dart test/service/item_service_test.dart
@@ -171,7 +171,7 @@ The message body must say, in the author's own words: the field was `String?` an
 - Consumes: `Item.availability` as `List<ItemTimeInterval>` and `ItemTimeInterval`'s value equality from Task 1.
 - Produces: nothing another task uses. This task owns the rule "the form only sends what the form shows".
 
-- [ ] **Step 1: Write the failing widget test**
+- [x] **Step 1: Write the failing widget test**
 
 The file already wraps the screen in `AppLocalizations` with `Locale('en', '')`, registers `MockItemService` in `getIt`, and constructs the screen as `ItemEditScreen(item: saved)` — follow `editing an item shows the approval the item actually has` for the scaffolding, and add:
 
@@ -202,21 +202,21 @@ testWidgets('saving an edited item keeps the lending windows the server sent',
 
 `find.text('Save')` is verified, not guessed: `lib/l10n/app_en.arb:3` is `"save": "Save"`, and `CustomButton` renders its title in a `Text` (`custom_button.dart:54`), so the label is findable in the test's `Locale('en','')` wrapper.
 
-- [ ] **Step 2: Run it and watch it fail**
+- [x] **Step 2: Run it and watch it fail**
 
 Run: `flutter test test/widget/item_edit_screen_test.dart`
 Expected: FAIL with `Expected: [...]` / `Actual: []` — the screen builds its `Item` from form fields only, so `availability` is the constructor default. If it fails any other way, find out why before continuing.
 
-- [ ] **Step 3: Carry the windows through the save**
+- [x] **Step 3: Carry the windows through the save**
 
 In `lib/widget/item/item_edit_screen.dart`, inside `final updatedItem = Item(`, add `availability: _item?.availability ?? const [],` next to `uuid: _item?.uuid`. One line. The reason belongs in the commit, not a comment: `PATCH` replaces the column from `ItemRequestDto`, whose `availability` defaults to `emptyList()`, so a body that omits windows the form never displayed **erases the lending window the owner set on the web**.
 
-- [ ] **Step 4: Run the file to green, then the suite**
+- [x] **Step 4: Run the file to green, then the suite**
 
 Run: `flutter test test/widget/item_edit_screen_test.dart && flutter test`
 Expected: PASS both.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add lib/widget/item/item_edit_screen.dart test/widget/item_edit_screen_test.dart
@@ -236,7 +236,7 @@ Every claim in this plan about the wire comes from a measurement made while writ
 - Consumes: Task 1's exact JSON, unchanged.
 - Produces: measurements that Task 1's test literals and the spec's Phase 2c bullet cite.
 
-- [ ] **Step 1: Bring up the stack and the jar**
+- [x] **Step 1: Bring up the stack and the jar**
 
 ```bash
 cd backend-quarkus
@@ -247,11 +247,11 @@ java -jar target/quarkus-app/quarkus-run.jar      # no datasource env needed; de
 
 Expected: `Profile prod activated`, Liquibase quiet (already migrated), `curl -s localhost:8080/q/openapi` answers YAML. If the jar writes to the host postgres on 5432, stop: that is the `d50e638` regression.
 
-- [ ] **Step 2: Get a token as a seeded realm user**
+- [x] **Step 2: Get a token as a seeded realm user**
 
 Use the recipe already in the runbook's *Backend* section (`POST localhost:8180/realms/quarkus/protocol/openid-connect/token` with the `backend-service` client and a seeded user). The runbook records that the *web's* scripted login got HTTP 400 from Keycloak 26 while this one works — if this one now 400s too, say so in the runbook instead of working around it, and continue Task 3 by hand from a browser session cookie.
 
-- [ ] **Step 3: Send exactly what the fixed app sends, and record the answers**
+- [x] **Step 3: Send exactly what the fixed app sends, and record the answers**
 
 Three requests, bodies verbatim from Task 1's model output (`"availability": []` for the create, one real window for the update):
 
@@ -263,11 +263,11 @@ Three requests, bodies verbatim from Task 1's model output (`"availability": []`
 
 The third row is the one that may surprise: if omitting the key turns out *not* to clear the windows, Task 2's fix is still right but its justification changes, and the plan's and runbook's wording must change with it. Do not record an assumption as a measurement.
 
-- [ ] **Step 4: Update the runbook**
+- [x] **Step 4: Update the runbook**
 
 Mark *What does not work* 8 and 9 as fixed-by-plan-2c with the commit sha and the date, naming the three requests above and their answers; add the same to *Verified*. Keep the "verified against the pre-Phase-1 artifact too" sentence — it is what proves the defect was inherited. Note in the same edit that the artifact-level automated check (boot the jar, read one `is*` field, POST one item) is still Phase 5's, since no CI job boots the artifact.
 
-- [ ] **Step 5: Tear down and commit**
+- [x] **Step 5: Tear down and commit**
 
 ```bash
 pkill -f "quarkus-app/quarkus-run.jar"
@@ -276,7 +276,7 @@ git add docs/runbook.md
 git commit -m "docs: record the availability measurements behind plan 2c"
 ```
 
-- [ ] **Step 6: Run every gate on both repos**
+- [x] **Step 6: Run every gate on both repos**
 
 ```bash
 cd frontend_flutter && dart format --output=none --set-exit-if-changed . && flutter analyze && flutter test
@@ -292,3 +292,61 @@ Expected: format 0, `No issues found`, 155 tests passing. This plan touches no b
 - **Spec coverage.** The Phase 2c bullet's two open questions are answered as Global Constraints (send `[]`; empty is unrestricted) and its "Flutter model plus the fixtures" scope is Task 1. The bullet's remaining items (`custom_paginated_list.dart`, `notification_screen.dart`, `item_edit_screen.dart`'s `availableUntil`/community-index bugs, `setting_screen.dart`'s "Logout", `app_en.arb`'s "Elektric device", the Next.js stubs) belong to plan 2d and are named as out of scope rather than dropped — the spec's 2d row says so.
 - **Review Focus coverage.** 1 → Task 1 Step 3 (`a new item sends an empty availability list`) and Step 1; 2 → Step 3 (`without the availability key`); 3 → Task 2 Step 1; 4 → Step 3 (`its availability intact`); 5 → Step 3 (`rejected, not ignored`). The `PATCH`-clears-the-window hazard is reviewed by Task 3 Step 3's third row, which is a measurement, not a test.
 - **Type consistency.** `ItemTimeInterval(startDayOfWeek:, endDayOfWeek:, startTimeAt:, endTimeAt:)` is used identically in Task 1's tests, Task 1's implementation, Task 2's test, and Task 3's requests.
+
+---
+
+## Execution record (2026-11-24)
+
+Executed inline, task by task, TDD. Commits: `frontend_flutter` `c3797a3` (Task 1), `69372fc` (Task 2),
+`7bd83af` (review fixes); `backend-quarkus` `d12301e` (this plan + the spec's 2c-first reordering), `2802be6`
+(Task 3's measurements), `cc04a05` (review fixes); `frontend-nextjs` `735cd87` (a comment the review invalidated).
+Gates at the end: `flutter test` **157**, `flutter analyze` clean, `dart format --set-exit-if-changed` clean,
+web `tsc` 0 / jest 209, host postgres on 5432 untouched (5 changesets, `dateexecuted` unchanged).
+
+**Step 5 of Task 1 was corrected mid-flight** (the note is inline above): the strict parse was justified with a
+400 claim that turned out to be false.
+
+### Review round
+
+One fresh-context reviewer (`claude-opus-5-5`) over both review packages, the plan, the spec and the ledger,
+with the five Review Focus cases and six specific questions. No Critical. **Four Important, all four verified
+against the code or the artifact before anything changed; three confirmed and are fixed, one is confirmed but is
+plan 2d's code with a documentation fix here.** Two of its four Minor items are folded into the same docs
+correction because they were inaccuracies in text I had written; two are deferred.
+
+- **The widget test did not test the mechanism.** `ItemDto` — what a page actually sends — has no
+  `availability` field, so in production the item the screen opens with *always* has empty windows and the
+  carry-across works only because `getItem` has replaced it. The test passed the same object as both.
+  Fixed: it opens windowless and takes the windows from `getItem`, then re-verified both ways — green, then red
+  (`Expected: [ItemTimeInterval(1-3, 09:00Z..17:00Z)] / Actual: []`) with the production line deleted, then
+  green again. The reviewer also noted a race in which the image fetch re-emits the page item; milliseconds
+  wide, plan 2d's along with the rest of that screen.
+- **Unknown keys are ignored, not rejected** — and my probe from 2026-11-23 had been misread. Measured: an
+  interval with a fifth key is accepted (200) and comes back without it. The claim had travelled into the spec,
+  Phase 1's plan, this plan, the Flutter model and `app/models/item.ts`; all five now carry the correction, the
+  Phase 1 plan as a dated note rather than a rewrite. Test renamed to what it proves; a characterization test
+  pins the drop. Declined to "fix" by rejecting unknown keys: that breaks the app the day the backend adds a
+  harmless field.
+- **The excuse in runbook item 10 was false.** It said the seeded users have no usable password; the same file
+  says two lines up that passwords equal the username. With `jdoe` as a second caller: Friday against a Mon–Wed
+  window → **400 `DATES_NOT_IN_INTERVAL`**; Tuesday → **201**; the same Friday after clearing the window →
+  **201**. The plan's central product consequence is now measured rather than inferred.
+- **Making mobile edit work exposed two older bugs of the same shape** — `availableUntil` is sent from a picker
+  that starts empty while the label shows the stored value, and the community picker starts at index 0 instead
+  of the item's community, so a save can move an item into one of your other communities. Both were already in
+  plan 2d; what plan 2c owed was not letting runbook item 9 read as "mobile edit is safe", so there is now an
+  item 11 saying exactly what a mobile save still loses. **Ruling: not fixed here** — seeding the community
+  index needs the community page resolved against the loaded item, which is a change of its own size, and the
+  plan and spec already own it. Cost if wrong: an owner loses an edit date or relocates an item in the meantime.
+
+Two findings this plan did not expect, both pre-existing backend behaviour now written down: the **UTC offset of
+a window is discarded** (`08:30+01:00` → `08:30Z`), added to plan 2b's backend list; and **booking is not gated
+by membership**, only by ownership (a user in no community got 201 on someone else's item), which the spec's
+authorization table now says it must cover.
+
+**Deferred minors** (the reviewer's, not fixed here): `TypeError` rather than `ArgumentError` if the server ever
+sends `"1"` or `1.0` for a day, with the spinner-stuck consequence on a save response — the reviewer agreed the
+loud failure is acceptable while Jackson writes whole numbers; the service-layer `getItem` test never asserts on
+availability; no test parses a `jsonDecode`d body (every test here uses Dart literals, which is exactly why the
+`List<Map<String, Object>>` vs `List<dynamic>` wording in the runbook needed correcting); and the reviewer could
+not run CI on a fresh checkout, so the format/lint verdict there is mine, not its.
