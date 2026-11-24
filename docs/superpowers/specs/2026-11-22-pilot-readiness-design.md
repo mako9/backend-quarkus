@@ -473,13 +473,19 @@ single plan would be unusable. All in `docs/superpowers/plans/`:
 | `2026-11-23-phase3-proximity.md` | Phase 3 (incl. plan 2b's `updateCommunity` coordinate fix) | 10 |
 | `2026-11-23-phase4-notifications.md` | Phase 4 | 7 |
 | `2026-11-23-phase4b-conversation.md` | Phase 4b | 9 |
-| *not yet written* | Plan 2b (backend logic), plan 2c (client defects) | — |
+| `2026-11-24-phase2c-mobile-item-availability.md` | Phase 2c — the mobile `availability` defect; **executes ahead of 2 and 2b** | 3 |
+| *not yet written* | Plan 2b (backend logic), plan 2d (the rest of the client defect list) | — |
 | *not yet written* | Phase 5, Phase 6 | — |
 
-Written in dependency order, and each plan names the phases it depends on. Plans 2b and 2c are
-deliberately deferred: they are defect lists whose line numbers move under the phases ahead of them, and
+Written in dependency order, and each plan names the phases it depends on. Plans 2b and the client-defect
+plan are deliberately deferred: they are defect lists whose line numbers move under the phases ahead of them, and
 drafting them against code that Phase 1 Task 6 and Phase 2 Tasks 8–10 are about to change would produce
-instructions that are wrong on arrival. Phases 5 and 6 are blocked on the *Open questions* they answer
+instructions that are wrong on arrival. **Plan 2c is the exception, decided 2026-11-24:** it was written first and
+is meant to run first, because measuring the defect (Phase 1's review round) showed it is not a client-polish item
+but the loss of the item screen on the pilot's only true mobile target. It touches no authorization surface, so
+nothing in plan 2 has to land before it.
+
+Phases 5 and 6 are blocked on the *Open questions* they answer
 (hosting and RAM, hostname, SMTP relay, off-box backups, account-deletion semantics, web topology) — see
 the questions at the end of this document.
 
@@ -599,13 +605,16 @@ one gap this phase closed late, and one thing it deliberately left undone:
 
 Mechanical, boring, ordered by blast radius.
 
-**Split into three plans, 2026-11-23.** The list below is one phase but three reviewable units: it mixes
-authorization work, backend-logic defects and client defects, and a single plan for all of it would be
-unwieldy. **Plan 2** (`docs/superpowers/plans/2026-11-23-phase2-trust-and-authorization.md`) covers
+**Split into four plans, 2026-11-23; reordered 2026-11-24.** The list below is one phase but four reviewable
+units: it mixes authorization work, backend-logic defects and client defects, and a single plan for all of it
+would be unwieldy. **Plan 2** (`docs/superpowers/plans/2026-11-23-phase2-trust-and-authorization.md`) covers
 *Secrets and auth* and the read-authorization table, plus `UserService.updateUser` pulled forward
-because Phase 3 geocodes what it erases. **Plan 2b** covers the *Backend logic* list. **Plan 2c** covers
-the *Flutter* and *Next.js* defect lists. 2b and 2c are written after plan 2 lands, so they are drafted
-against the code as it then is; nothing below is dropped, and `updateCommunity`'s coordinate loss is the
+because Phase 3 geocodes what it erases. **Plan 2b** covers the *Backend logic* list. **Plan 2c**
+(`docs/superpowers/plans/2026-11-24-phase2c-mobile-item-availability.md`) covers the one *Flutter* line that is
+not polish — the `availability` type — and **runs first**, ahead of plans 2 and 2b, since measuring it turned it
+into "the item screen does not work on Android" rather than "a client defect". **Plan 2d**, not yet written,
+covers the remainder of the *Flutter* and *Next.js* lists. 2b and 2d are written after plan 2 lands, so they are
+drafted against the code as it then is; nothing below is dropped, and `updateCommunity`'s coordinate loss is the
 one line already pulled into Phase 3 because coordinates that cannot be corrected make that phase
 untestable. The serialization/`is*` rename that the Flutter list points at moved **up into Phase 1
 Task 6**, where it belongs with the artifact that has to emit it.
@@ -702,8 +711,16 @@ Task 6**, where it belongs with the artifact that has to emit it.
   being `java.time.DayOfWeek` (1 = Monday). The Next.js half is done: `availability: Array<ItemTimeInterval>`
   from Phase 1 Task 4, with `ItemTimeInterval` corrected to the four DTO fields in `3540200` (unknown interval
   keys are a 400, not ignored, so the type must be exact). What is left for 2c is the Flutter model plus the
-  fixtures that currently hand it a `String` (`test/service/item_service_test.dart`), and deciding whether the
-  app should send no window as `[]` or omit the key — both answer 200 today.
+  fixtures that currently hand it a `String` (`test/service/item_service_test.dart`).
+  **Planned in `docs/superpowers/plans/2026-11-24-phase2c-mobile-item-availability.md`, which decides the two
+  open questions with measurements:** the app sends no window as `[]`, never by omitting the key, because
+  `ItemRequestDto.availability` is `List<ItemTimeIntervalDto> = emptyList()` and `PATCH` replaces the column
+  (`ItemController.kt:138`), so a body that leaves the field out is a *write* of "no window"; and an empty list
+  is safe to send, because `checkItemAvailability` guards the interval check with
+  `itemModel.availability.isNotEmpty() &&` (`ItemService.kt:485`) — an item with no window is bookable at any
+  time, not at none. The consequence of that second fact is a product decision, recorded here rather than
+  smuggled into a client fix: **until plan 2d gives mobile an availability editor, an item created on a phone has
+  no lending window and can be booked for any date**, and the owner sets or changes the window on the web.
   `frontend-nextjs/app/models/{item,community}.ts` need no further renames beyond Phase 1's.
 - Pagination: `custom_paginated_list.dart:71` only renders controls when
   `content.length > pageSize`, which the 10-item server page can never satisfy; and
